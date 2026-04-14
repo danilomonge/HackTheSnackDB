@@ -36,7 +36,9 @@ import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 
 /**
- * Clase de controlador para servicio Rest de Substance
+ * Clase de controlador para servicio Rest de Substance.
+ * Expone los endpoints tanto en /substance como en /ingredient (alias)
+ * para compatibilidad con el frontend HackTheSnack.
  * 
  * @author Jorge Serrano
  * @version 1.0
@@ -50,10 +52,9 @@ public class SubstanceControllerImpl implements SubstanceController {
 	private SubstanceService substanceService;
 
 	/**
-	 * Operation: Operation: create, Method: POST Crea un registro en la BB.DD.
-	 * @param headers		Arreglo de objetos de tipo llave valor para almacenar los headers
-	 * @param body 			Cuerpo de la peticion con la informacion del regsitro que se desean insertar
-	 * @return 				Ojeto con el cuerpo de respuesta (ong con el id del registro actualizado) y le codigo de respuesta http corrspondiente a la operacion
+	 * Operation: create, Method: POST
+	 * Crea un registro en la BB.DD.
+	 * Disponible en /substance y /ingredient
 	 */
 	@Override
 	@ApiImplicitParams({
@@ -66,7 +67,7 @@ public class SubstanceControllerImpl implements SubstanceController {
 		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
 		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
 		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
-	@PostMapping(value = "/substance", produces = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(value = {"/substance", "/ingredient"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<Long>> createSubstance(@RequestHeader Map<String, String> headers,
 			@RequestBody CreateSubstanceRequestVO body) {
 		
@@ -90,11 +91,9 @@ public class SubstanceControllerImpl implements SubstanceController {
 	}
 	
 	/**
-	 * Operation: Operation: update, Method: POST Actualiza un registro en la BB.DD.
-	 * @param headers		Arreglo de objetos de tipo llave valor para almacenar los headers
-	 * @param id 			Identificador del registro a actualizar
-	 * @param body 			Cuerpo de la peticion con la informacion del regsitro que se desean insertar
-	 * @return 				Ojeto con el cuerpo de respuesta (ong con el id del registro actualizado) y le codigo de respuesta http corrspondiente a la operacion
+	 * Operation: update, Method: PUT
+	 * Actualiza un registro en la BB.DD.
+	 * Disponible en /substance/{id} y /ingredient/{id}
 	 */
 	@Override
 	@ApiImplicitParams({
@@ -107,7 +106,7 @@ public class SubstanceControllerImpl implements SubstanceController {
 		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
 		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
 		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
-	@PutMapping(value = "/substance/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+	@PutMapping(value = {"/substance/{id}", "/ingredient/{id}"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<Long>> updateSubstance(@RequestHeader Map<String, String> headers, 
 			@PathVariable(name = "id", required = false) Long id, 
 			@RequestBody UpdateSubstanceRequestVO body) {
@@ -137,11 +136,9 @@ public class SubstanceControllerImpl implements SubstanceController {
 	}
 	
 	/**
-	 * Operation: delete, Method: DELETE Elimina un registro en la BB.DD.
-	 * 
-	 * @param headers		Arreglo de objetos de tipo llave valor para almacenar los headers
-	 * @param id 			Identificador del registro a actualizar
-	 * @return 				Objeto con el resultado del borrado
+	 * Operation: delete, Method: DELETE
+	 * Elimina un registro en la BB.DD.
+	 * Disponible en /substance/{id} y /ingredient/{id}
 	 */
 	@Override
 	@ApiImplicitParams({
@@ -154,7 +151,7 @@ public class SubstanceControllerImpl implements SubstanceController {
 		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
 		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
 		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
-	@DeleteMapping(value = "/substance/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+	@DeleteMapping(value = {"/substance/{id}", "/ingredient/{id}"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<Boolean>> deleteSubstance(@RequestHeader Map<String, String> headers,
 			@PathVariable("id") Long id) {
 		// Declaracion de variables
@@ -181,11 +178,9 @@ public class SubstanceControllerImpl implements SubstanceController {
 	}
 
 	/**
-	 * Operation: findEventDetail, Method: Busca el detalle de un registro en la base de datos.
-	 * 
-	 * @param headers		Arreglo de objetos de tipo llave valor para almacenar los headers
-	 * @param id 			Identificador del registro a buscar
-	 * @return 				Objeto con el resultado del borrado
+	 * Operation: findDetail, Method: GET
+	 * Busca el detalle de un registro en la base de datos.
+	 * Disponible en /substance/detail y /ingredient/detail
 	 */
 	@Override
 	@ApiImplicitParams({
@@ -198,7 +193,7 @@ public class SubstanceControllerImpl implements SubstanceController {
 		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
 		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
 		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
-	@GetMapping(value = "/substance/detail", produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = {"/substance/detail", "/ingredient/detail"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<FindDetailSubstanceResponseVO>> findDetailSubstance(
 			@RequestHeader Map<String, String> headers, 
 			@RequestParam(value = "id", required= false) Long id,
@@ -229,16 +224,9 @@ public class SubstanceControllerImpl implements SubstanceController {
 	}
 	
 	/**
-	 * Operation: findEventList, Method: GET Consulta la lista de registros en
-	 * base a varios parametros. El resultado se regresa como un arreglo de
-	 * registros.
-	 * 
-	 * @return ResponseVO con la lista de registros encontrada
-	 * 
-	 * @param nombre Patron de nombre a buscar
-	 * @param page   Numero de pagina
-	 * @param size   Tamano de pagina
-	 * @param token  Token de sesion
+	 * Operation: findList, Method: GET
+	 * Consulta la lista de registros con filtros.
+	 * Disponible en /substance/list y /ingredient/list
 	 */
 	@Override
 	@ApiImplicitParams({
@@ -251,7 +239,7 @@ public class SubstanceControllerImpl implements SubstanceController {
 		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
 		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
 		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
-	@GetMapping(value = "/substance/list", produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = {"/substance/list", "/ingredient/list"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<List<FindListSubstanceResponseVO>>> findListSubstance(
 			@RequestHeader Map<String, String> headers, 
 			@RequestParam(value = "page", required = false) Integer page,

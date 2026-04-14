@@ -74,7 +74,10 @@ public class PersistenceConfig {
         factory.setPackagesToScan( "de.pecus.api.entities" );
 	
         Properties jpaProperties = new Properties();
-        jpaProperties.put( "hibernate.hbm2ddl.auto", "none" );
+        String ddlAuto = hibernateConfigProps.getHbm2dllAuto() != null
+                ? hibernateConfigProps.getHbm2dllAuto()
+                : "none";
+        jpaProperties.put( "hibernate.hbm2ddl.auto", ddlAuto );
         jpaProperties.put( "hibernate.dialect", hibernateConfigProps.getDialect() );
         jpaProperties.put( "hibernate.format_sql", "true" );
         jpaProperties.put( "hibernate.show_sql", hibernateConfigProps.getShowSql() );

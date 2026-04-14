@@ -54,7 +54,7 @@ jdbc:
   #maxConnectionAge: 1800 #Default: 0 forces the pool to cull any Connections that were acquired from the database more than the set number of seconds in the past.
   maxIdleTimeExcessConnections: 300 #Default: 0   much shorter than maxIdleTime, forcing Connections beyond your set minimum size to be released if they sit idle for more than a short period of time.
   #unreturnedConnectionTimeout: 60 #Default: 0  secondes   how long a Connection may remain checked out.
-  checkoutTimeout: 4000 #limits how long a client will wait for a Connection. El valor predeterminado es 0, el tiempo de espera para una nueva conexión después de getConnection (), SQLException se lanzará después del tiempo de espera, si se establece en 0, esperará indefinidamente. La unidad es milisegundos.
+  checkoutTimeout: 4000 #limits how long a client will wait for a Connection. El valor predeterminado es 0, el tiempo de espera para una nueva conexion despues de getConnection (), SQLException se lanzara despues del tiempo de espera, si se establece en 0, esperara indefinidamente. La unidad es milisegundos.
   contextClassLoaderSource: caller
   privilegeSpawnedThreads: true
 
@@ -110,4 +110,105 @@ app:
 
 security:
   rolmenu-validation: false
+---
+#PERFIL RENDER (Render.com deployment)
+#Activa este perfil configurando la variable de entorno SPRING_PROFILES_ACTIVE=render
+server:
+  port: ${PORT:8087}
+  servlet:
+    context-path: /user-management
+application:
+  id: USER-MANAGEMENT
+  moduleOperation:
+    companyManagement: /user-management
+spring:
+  config:
+    activate:
+      on-profile: render
+  main:
+    allow-bean-definition-overriding: true
+    banner-mode: off
+  datasource:
+    jdbcUrl: jdbc:postgresql://${PGHOST}:${PGPORT:5432}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+    driverClassName: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 2
+  jpa:
+    show-sql: false
+    open-in-view: false
+    properties:
+      format_sql: false
+      jdbc:
+        time_zone: UTC
+  cache:
+    type: simple
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
+jdbc:
+  initialPoolSize: 2
+  acquireIncrement: 1
+  minPoolSize: 1
+  maxPoolSize: 3
+  maxIdleTime: 10800
+  maxIdleTimeExcessConnections: 300
+  checkoutTimeout: 4000
+  contextClassLoaderSource: caller
+  privilegeSpawnedThreads: true
+
+hibernate:
+  show_sql: false
+  format_sql: false
+  dialect: org.hibernate.dialect.PostgreSQLDialect
+  hbm2ddl:
+    auto: update
+  connection:
+    provider_class: org.hibernate.connection.C3P0ConnectionProvider
+  c3p0:
+    acquire_increment: 1
+
+swagger:
+  contact:
+    email: dev.api@pecus.com.mx
+    url: dev.api@pecus.com.mx
+    name: DEV API
+  description: USER MANAGEMENT PECUS API
+  title: API - PECUS
+  enabled: false
+
+logging:
+  level:
+    org:
+      root: INFO
+      hibernate: INFO
+
+url:
+  validateToken: ${VALIDATE_TOKEN_URL:http://localhost:59336/session-management/session/validate}
+
+service:
+  client:
+    find-person: http://localhost:51854/ml-person-management/persons/listByName
+    find-person-id: http://localhost:51854/ml-person-management/persons/list
+    patient: http://localhost:65510/person-management/person
+    create-person: http://localhost:51854/ml-person-management/persons
+    send-mail: http://localhost:51692/messaging-management/messaging/mail/send-notification
+    send-push: http://localhost:51692/messaging-management/messaging/push/send-notification
+    send-sms: http://localhost:51692/messaging-management/messaging/sms/send-notification
+    find-patient: http://localhost:65510/person-management/person
+    increse-statistics: http://localhost:54652/statistics-management/statistics/estadistica/increase
+  token:
+    increse-statistics: Token....
+  props:
+    increse-statistics:
+      idTipoComponente: 4
+      idComponente: 4
+
+app:
+  version: ^project.version^
+
+security:
+  rolmenu-validation: false

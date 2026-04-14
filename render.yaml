@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: fakethesnackdb-api
+    runtime: java
+    plan: free
+    buildCommand: cd ms-java-user-management-pecus && mvn clean package -DskipTests -s ../settings.xml
+    startCommand: java -Dspring.profiles.active=render -jar ms-java-user-management-pecus/target/ms-java-user-management-pecus-0.0.1.jar
+    healthCheckPath: /user-management/actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      # Render PostgreSQL connection — link the database in Render dashboard
+      # and these variables will be injected automatically:
+      - key: PGHOST
+        sync: false
+      - key: PGPORT
+        value: "5432"
+      - key: PGDATABASE
+        sync: false
+      - key: PGUSER
+        sync: false
+      - key: PGPASSWORD
+        sync: false
