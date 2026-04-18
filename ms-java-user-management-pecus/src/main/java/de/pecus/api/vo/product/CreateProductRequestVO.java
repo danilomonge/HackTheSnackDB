@@ -45,9 +45,9 @@ public class CreateProductRequestVO {
 	public void setIdBrand(Long idBrand) { this.idBrand = idBrand;}
 
 	public Long getIdCategory() {return idCategory;}
-	public void setIdCategory() {this.idCategory = idCategory;}
+	public void setIdCategory(Long idCategory) {this.idCategory = idCategory;}
 
 	public Long getIdSubCategory() {return idSubCategory;}
-	public void setIdSubCategory() {this.idSubCategory = idSubCategory;}
+	public void setIdSubCategory(Long idSubCategory) {this.idSubCategory = idSubCategory;}
 
 }
