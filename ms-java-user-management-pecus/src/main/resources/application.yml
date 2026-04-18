@@ -129,7 +129,7 @@ spring:
     allow-bean-definition-overriding: true
     banner-mode: off
   datasource:
-    jdbcUrl: jdbc:postgresql://${PGHOST}:${PGPORT:5432}/${PGDATABASE}
+    jdbcUrl: jdbc:postgresql://${PGHOST}:${PGPORT:5432}/${PGDATABASE}?sslmode=require
     username: ${PGUSER}
     password: ${PGPASSWORD}
     driverClassName: org.postgresql.Driver
