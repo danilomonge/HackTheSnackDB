@@ -1,9 +1,13 @@
 package de.pecus.api.controllers.impl;
 
 import de.pecus.api.entities.EvaluationDO;
+import de.pecus.api.entities.ProductDO;
 import de.pecus.api.entities.ResultItemDO;
+import de.pecus.api.entities.SubstanceDO;
 import de.pecus.api.repositories.usuarios.EvaluationRepository;
+import de.pecus.api.repositories.usuarios.ProductRepository;
 import de.pecus.api.repositories.usuarios.ResultItemRepository;
+import de.pecus.api.repositories.usuarios.SubstanceRepository;
 import de.pecus.api.util.ResponseUtil;
 import de.pecus.api.vo.ResponseVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -39,11 +45,20 @@ import java.util.*;
 @RequestMapping("/evaluation")
 public class EvaluationControllerImpl {
 
+    private static final DateTimeFormatter ISO_FMT =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'+00:00'").withZone(ZoneOffset.UTC);
+
     @Autowired
     private EvaluationRepository evaluationRepository;
 
     @Autowired
     private ResultItemRepository resultItemRepository;
+
+    @Autowired
+    private SubstanceRepository substanceRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     /**
      * POST /evaluation
@@ -180,19 +195,39 @@ public class EvaluationControllerImpl {
             if (idProduct != null && idIngredient != null) {
                 items = resultItemRepository.findByProductIdAndSubstanceId(idProduct, idIngredient);
             } else if (idProduct != null) {
-                // Find all result items whose evaluation belongs to this product
                 List<EvaluationDO> evals = evaluationRepository.findByProductId(idProduct);
                 items = new ArrayList<>();
                 for (EvaluationDO e : evals) {
                     items.addAll(resultItemRepository.findByEvaluationId(e.getId()));
                 }
+            } else if (idIngredient != null) {
+                items = resultItemRepository.findBySubstanceId(idIngredient);
             } else {
                 items = new ArrayList<>();
             }
 
+            // Build name lookup maps to avoid N+1
+            Map<Long, String> substanceNames = new HashMap<>();
+            Map<Long, String> productNames = new HashMap<>();
+            for (ResultItemDO ri : items) {
+                if (ri.getSubstanceId() != null && !substanceNames.containsKey(ri.getSubstanceId())) {
+                    SubstanceDO s = substanceRepository.findById(ri.getSubstanceId());
+                    if (s != null) substanceNames.put(ri.getSubstanceId(), s.getName());
+                }
+                if (ri.getProductId() != null && !productNames.containsKey(ri.getProductId())) {
+                    ProductDO p = productRepository.findById(ri.getProductId());
+                    if (p != null) productNames.put(ri.getProductId(), p.getName());
+                }
+            }
+
             List<Map<String, Object>> result = new ArrayList<>();
             for (ResultItemDO ri : items) {
-                result.add(resultItemToMap(ri));
+                Map<String, Object> m = resultItemToMap(ri);
+                m.put("ingredientName", substanceNames.getOrDefault(ri.getSubstanceId(), "Unknown"));
+                m.put("productName", productNames.getOrDefault(ri.getProductId(), "Unknown"));
+                m.put("evaluationDate", ri.getCreationDate() != null
+                    ? ISO_FMT.format(ri.getCreationDate().toInstant()) : null);
+                result.add(m);
             }
             response.setSuccess(true);
             response.setData(result);
