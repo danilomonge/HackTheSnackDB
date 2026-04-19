@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import de.pecus.api.constant.DataConstants;
 import de.pecus.api.entities.BrandDO;
@@ -193,6 +194,7 @@ public class ProductServiceImpl implements ProductService {
 	 * 
 	 * @param request Objeto con los datos de busqueda
 	 */
+	@Transactional(readOnly = true)
 	public ResponseVO<FindDetailProductResponseVO> findDetail(RequestVO<FindDetailProductRequestVO> request) {
 
 		// declaracion de varables
@@ -237,6 +239,7 @@ public class ProductServiceImpl implements ProductService {
 	 * 
 	 * @param request Objeto con parametros de entrada de banner
 	 */
+	@Transactional(readOnly = true)
 	public ResponseVO<List<FindListProductResponseVO>> findList(RequestVO<FindListProductRequestVO> request) {
 
 		// declaracion de varables

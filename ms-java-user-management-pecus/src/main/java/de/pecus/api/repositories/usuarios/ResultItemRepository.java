@@ -15,4 +15,7 @@ public interface ResultItemRepository extends JpaRepository<ResultItemDO, Serial
 
     @Query("SELECT r FROM ResultItemDO r WHERE r.active = true AND r.productId = :productId AND r.substanceId = :substanceId")
     List<ResultItemDO> findByProductIdAndSubstanceId(@Param("productId") Long productId, @Param("substanceId") Long substanceId);
+
+    @Query("SELECT r FROM ResultItemDO r WHERE r.active = true AND r.substanceId = :substanceId")
+    List<ResultItemDO> findBySubstanceId(@Param("substanceId") Long substanceId);
 }
