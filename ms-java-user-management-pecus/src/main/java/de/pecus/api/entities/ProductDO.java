@@ -44,17 +44,17 @@ public class ProductDO extends AuditBase<Long> implements Serializable {
 	private String descripcion;
 	
 	/****************************  RELACION 1..N ******************************/
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "FK_BRAND_ID" , referencedColumnName = "PK_ID")
 	private BrandDO brand;
 
 	/****************************  RELACION 1..N ******************************/
-	@ManyToOne (fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "FK_CATEGORY_ID" , referencedColumnName = "PK_ID")
 	private CategoryDO category;
 
 	/****************************  RELACION 1..N ******************************/
-	@ManyToOne (fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "FK_SUBCATEGORY_ID" , referencedColumnName = "PK_ID")
 	private SubCategoryDO subCategory;
 
