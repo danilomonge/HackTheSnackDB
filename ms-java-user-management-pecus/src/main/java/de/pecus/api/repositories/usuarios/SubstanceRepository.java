@@ -18,7 +18,7 @@ public interface SubstanceRepository extends JpaRepository<SubstanceDO, Serializ
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  SubstanceDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.name = :name")
 	SubstanceDO findByName(@Param("name") String name);
 	
@@ -31,7 +31,7 @@ public interface SubstanceRepository extends JpaRepository<SubstanceDO, Serializ
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  SubstanceDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.id = :id")
 	SubstanceDO findById(@Param("id") Long id);
 	
@@ -45,7 +45,7 @@ public interface SubstanceRepository extends JpaRepository<SubstanceDO, Serializ
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  SubstanceDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND (:name IS NULL OR (TRANSLATE(UPPER(r.name),'áéíóú','aeiou') LIKE %:name%))")
 	Page<SubstanceDO> findList(@Param("name") String name,
                              Pageable pageable);

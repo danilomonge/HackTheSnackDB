@@ -19,7 +19,7 @@ public interface TipoRolRepository extends JpaRepository<TipoRolDO, Serializable
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  TipoRolDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.idNombre = :idNombre")
 	TipoRolDO findByIdNombre(@Param("idNombre") String idNombre);
 	
@@ -32,7 +32,7 @@ public interface TipoRolRepository extends JpaRepository<TipoRolDO, Serializable
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  TipoRolDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.id = :id")
 	TipoRolDO findById(@Param("id") Long id);
 	
@@ -46,7 +46,7 @@ public interface TipoRolRepository extends JpaRepository<TipoRolDO, Serializable
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  TipoRolDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND (:idNombre IS NULL OR (TRANSLATE(UPPER(r.idNombre),'áéíóú','aeiou') LIKE %:idNombre%))")
 	Page<TipoRolDO> findList(@Param("idNombre") String idNombre, 
 			Pageable pageable);
