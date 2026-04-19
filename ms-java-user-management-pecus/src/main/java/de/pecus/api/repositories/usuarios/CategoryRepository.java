@@ -18,7 +18,7 @@ public interface CategoryRepository extends JpaRepository<CategoryDO, Serializab
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  CategoryDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.name = :name")
 	CategoryDO findByName(@Param("name") String name);
 	
@@ -31,7 +31,7 @@ public interface CategoryRepository extends JpaRepository<CategoryDO, Serializab
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  CategoryDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.id = :id")
 	CategoryDO findById(@Param("id") Long id);
 	
@@ -45,7 +45,7 @@ public interface CategoryRepository extends JpaRepository<CategoryDO, Serializab
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  CategoryDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND (:name IS NULL OR (TRANSLATE(UPPER(r.name),'áéíóú','aeiou') LIKE %:name%))")
 	Page<CategoryDO> findList(@Param("name") String name,
                            Pageable pageable);

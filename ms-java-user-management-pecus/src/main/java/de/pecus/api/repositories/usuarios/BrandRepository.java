@@ -18,7 +18,7 @@ public interface BrandRepository extends JpaRepository<BrandDO, Serializable> {
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  BrandDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.name = :name")
 	BrandDO findByName(@Param("name") String name);
 	
@@ -31,7 +31,7 @@ public interface BrandRepository extends JpaRepository<BrandDO, Serializable> {
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  BrandDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND r.id = :id")
 	BrandDO findById(@Param("id") Long id);
 	
@@ -45,7 +45,7 @@ public interface BrandRepository extends JpaRepository<BrandDO, Serializable> {
 	 */
 	@Query(value = " SELECT r" 
 			+ " FROM  BrandDO r"
-			+ " WHERE r.active = 1 "
+			+ " WHERE r.active = true "
 			+ " AND (:name IS NULL OR (TRANSLATE(UPPER(r.name),'áéíóú','aeiou') LIKE %:name%))")
 	Page<BrandDO> findList(@Param("name") String name,
                                Pageable pageable);
