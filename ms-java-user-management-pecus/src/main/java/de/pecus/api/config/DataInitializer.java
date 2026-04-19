@@ -44,7 +44,7 @@ public class DataInitializer implements ApplicationRunner {
             );
             // Ensure the sequence is at least at 1 so auto-generated IDs don't collide
             jdbcTemplate.execute(
-                "SELECT setval(pg_get_serial_sequence('BRAND', 'PK_ID'), GREATEST((SELECT MAX(PK_ID) FROM BRAND), 1))"
+                "SELECT setval(pg_get_serial_sequence('brand', 'pk_id'), GREATEST((SELECT MAX(pk_id) FROM brand), 1))"
             );
             log.info("DataInitializer: BRAND seed OK");
         } catch (Exception e) {
@@ -61,7 +61,7 @@ public class DataInitializer implements ApplicationRunner {
                 "ON CONFLICT (PK_ID) DO NOTHING"
             );
             jdbcTemplate.execute(
-                "SELECT setval(pg_get_serial_sequence('CATEGORY', 'PK_ID'), GREATEST((SELECT MAX(PK_ID) FROM CATEGORY), 1))"
+                "SELECT setval(pg_get_serial_sequence('category', 'pk_id'), GREATEST((SELECT MAX(pk_id) FROM category), 1))"
             );
             log.info("DataInitializer: CATEGORY seed OK");
         } catch (Exception e) {
@@ -78,7 +78,7 @@ public class DataInitializer implements ApplicationRunner {
                 "ON CONFLICT (PK_ID) DO NOTHING"
             );
             jdbcTemplate.execute(
-                "SELECT setval(pg_get_serial_sequence('SUBCATEGORY', 'PK_ID'), GREATEST((SELECT MAX(PK_ID) FROM SUBCATEGORY), 1))"
+                "SELECT setval(pg_get_serial_sequence('subcategory', 'pk_id'), GREATEST((SELECT MAX(pk_id) FROM subcategory), 1))"
             );
             log.info("DataInitializer: SUBCATEGORY seed OK");
         } catch (Exception e) {
