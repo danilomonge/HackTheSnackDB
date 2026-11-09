@@ -1,25 +1,27 @@
-HELP.md
+# Build output
 target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Logs and local env files
+logs/
+*.log
+.env
+.env.*
 
-### IntelliJ IDEA ###
-.idea
-*.iws
+# OS / editor files
+.DS_Store
+.idea/
 *.iml
+*.iws
 *.ipr
-
-### NetBeans ###
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.sts4-cache/
+.apt_generated
+.springBeans
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -28,6 +30,4 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
-
-### VS Code ###
-.vscode/
+HELP.md

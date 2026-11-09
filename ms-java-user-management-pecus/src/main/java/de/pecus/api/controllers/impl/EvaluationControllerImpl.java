@@ -1,45 +1,58 @@
 package de.pecus.api.controllers.impl;
 
-import de.pecus.api.entities.EvaluationDO;
-import de.pecus.api.entities.ProductDO;
-import de.pecus.api.entities.ResultItemDO;
-import de.pecus.api.entities.SubstanceDO;
-import de.pecus.api.repositories.usuarios.EvaluationRepository;
-import de.pecus.api.repositories.usuarios.ProductRepository;
-import de.pecus.api.repositories.usuarios.ResultItemRepository;
-import de.pecus.api.repositories.usuarios.SubstanceRepository;
-import de.pecus.api.util.ResponseUtil;
-import de.pecus.api.vo.ResponseVO;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import de.pecus.api.entities.EvaluationDO;
+import de.pecus.api.entities.ResultItemDO;
+import de.pecus.api.repositories.usuarios.EvaluationRepository;
+import de.pecus.api.repositories.usuarios.ResultItemRepository;
+import de.pecus.api.util.NameLookup;
+import de.pecus.api.util.ResponseUtil;
+import de.pecus.api.util.ServiceUtil;
+import de.pecus.api.vo.ResponseErrorVO;
+import de.pecus.api.vo.ResponseVO;
 
 /**
- * Controller for nutritional evaluations.
- * Exposes endpoints under /evaluation.
+ * Saved recipe estimations ("evaluations"). Exposed under /evaluation.
  *
- * Python payload for POST /evaluation:
+ * An evaluation is one saved run of the recipe generator for a product; its
+ * result items hold the estimated mean / variation percentage of every
+ * ingredient. Payload of POST /evaluation:
+ *
+ * <pre>
  * {
- *   "idProduct": Long,
- *   "idIngredient": Long,
- *   "idRecipe": Long,
- *   "ingredientMeanPercentage": Double,
- *   "ingredientStdPercentage": Double,
+ *   "idProduct": 1,
+ *   "idIngredient": 2,                 // optional, defaults to the first result item
+ *   "idRecipe": 3,                     // optional, defaults to the first result item
+ *   "ingredientMeanPercentage": 60.0,  // optional, defaults to the first result item
+ *   "ingredientStdPercentage": 1.5,    // optional, defaults to the first result item
  *   "resultList": [
- *     {
- *       "recipeId": Long,
- *       "ingredientId": Long,
- *       "ingredientMeanPercentage": Double,
- *       "ingredientStdPercentage": Double
- *     }, ...
+ *     {"recipeId": 3, "ingredientId": 2, "ingredientMeanPercentage": 60.0, "ingredientStdPercentage": 1.5},
+ *     ...
  *   ]
  * }
+ * </pre>
  */
 @RestController
 @RequestMapping("/evaluation")
@@ -55,88 +68,89 @@ public class EvaluationControllerImpl {
     private ResultItemRepository resultItemRepository;
 
     @Autowired
-    private SubstanceRepository substanceRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
+    private NameLookup nameLookup;
 
     /**
-     * POST /evaluation
-     * Creates an evaluation with all its result items.
-     * Returns 201 with {"success": true, "data": <evaluationId>}.
+     * Creates an evaluation together with all its result items in one transaction.
+     *
+     * @return 201 {"success": true, "data": evaluationId}; 400 when ids are missing or unknown.
      */
+    @Transactional
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ResponseVO<Long>> createEvaluation(@RequestBody Map<String, Object> body) {
-        ResponseVO<Long> response = new ResponseVO<>();
         try {
             Long idProduct = toLong(body.get("idProduct"));
-            Long idIngredient = toLong(body.get("idIngredient"));
-            Long idRecipe = toLong(body.get("idRecipe"));
-            Double meanPct = toDouble(body.get("ingredientMeanPercentage"));
-            Double stdPct = toDouble(body.get("ingredientStdPercentage"));
+            List<Map<String, Object>> resultList = toItemList(body.get("resultList"));
 
-            if (idProduct == null || idIngredient == null || idRecipe == null) {
-                response.setSuccess(false);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            if (idProduct == null || resultList.isEmpty()) {
+                return error(HttpStatus.BAD_REQUEST, "REQUIRED_PARAMETERS_ERROR",
+                        "idProduct and a non-empty resultList are required");
             }
-
-            Date now = new Date();
-
-            EvaluationDO evaluation = new EvaluationDO();
-            evaluation.setProductId(idProduct);
-            evaluation.setSubstanceId(idIngredient);
-            evaluation.setRecipeId(idRecipe);
-            evaluation.setIngredientMeanPercentage(meanPct != null ? meanPct : 0.0);
-            evaluation.setIngredientStdPercentage(stdPct != null ? stdPct : 0.0);
-            evaluation.setCreationDate(now);
-            evaluation.setCreatorUsername(1L);
-            evaluation.setLastModifiedDate(now);
-            evaluation.setLastModifiedUsername(1L);
-            evaluation.setActive(Boolean.TRUE);
-
-            evaluation = evaluationRepository.saveAndFlush(evaluation);
-            Long evaluationId = evaluation.getId();
-
-            // Persist each result item
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> resultList = (List<Map<String, Object>>) body.get("resultList");
-            if (resultList != null) {
-                for (Map<String, Object> item : resultList) {
-                    ResultItemDO ri = new ResultItemDO();
-                    ri.setEvaluationId(evaluationId);
-                    ri.setRecipeId(toLong(item.get("recipeId")));
-                    ri.setSubstanceId(toLong(item.get("ingredientId")));
-                    ri.setProductId(idProduct);
-                    ri.setIngredientMeanPercentage(toDouble(item.get("ingredientMeanPercentage")));
-                    ri.setIngredientStdPercentage(toDouble(item.get("ingredientStdPercentage")));
-                    ri.setCreationDate(now);
-                    ri.setCreatorUsername(1L);
-                    ri.setLastModifiedDate(now);
-                    ri.setLastModifiedUsername(1L);
-                    ri.setActive(Boolean.TRUE);
-                    resultItemRepository.saveAndFlush(ri);
+            if (!nameLookup.productExists(idProduct)) {
+                return error(HttpStatus.BAD_REQUEST, "NOT_FOUND_ERROR", "Unknown product id " + idProduct);
+            }
+            for (Map<String, Object> item : resultList) {
+                Long ingredientId = toLong(item.get("ingredientId"));
+                if (toLong(item.get("recipeId")) == null || ingredientId == null) {
+                    return error(HttpStatus.BAD_REQUEST, "REQUIRED_PARAMETERS_ERROR",
+                            "Every result item needs recipeId and ingredientId");
+                }
+                if (!nameLookup.ingredientExists(ingredientId)) {
+                    return error(HttpStatus.BAD_REQUEST, "NOT_FOUND_ERROR", "Unknown ingredient id " + ingredientId);
                 }
             }
 
-            response.setSuccess(true);
-            response.setData(evaluationId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            Map<String, Object> first = resultList.get(0);
+            EvaluationDO evaluation = new EvaluationDO();
+            evaluation.setProductId(idProduct);
+            evaluation.setSubstanceId(firstNonNull(toLong(body.get("idIngredient")), toLong(first.get("ingredientId"))));
+            evaluation.setRecipeId(firstNonNull(toLong(body.get("idRecipe")), toLong(first.get("recipeId"))));
+            evaluation.setIngredientMeanPercentage(firstNonNull(
+                    toDouble(body.get("ingredientMeanPercentage")), toDouble(first.get("ingredientMeanPercentage")), 0.0));
+            evaluation.setIngredientStdPercentage(firstNonNull(
+                    toDouble(body.get("ingredientStdPercentage")), toDouble(first.get("ingredientStdPercentage")), 0.0));
+            ServiceUtil.setAuditFields(evaluation, null);
+            evaluation = evaluationRepository.saveAndFlush(evaluation);
 
+            Date created = evaluation.getCreationDate();
+            List<ResultItemDO> items = new ArrayList<>();
+            for (Map<String, Object> item : resultList) {
+                ResultItemDO ri = new ResultItemDO();
+                ri.setEvaluationId(evaluation.getId());
+                ri.setProductId(idProduct);
+                ri.setRecipeId(toLong(item.get("recipeId")));
+                ri.setSubstanceId(toLong(item.get("ingredientId")));
+                ri.setIngredientMeanPercentage(firstNonNull(toDouble(item.get("ingredientMeanPercentage")), 0.0));
+                ri.setIngredientStdPercentage(firstNonNull(toDouble(item.get("ingredientStdPercentage")), 0.0));
+                ServiceUtil.setAuditFields(ri, null);
+                // All lines of one evaluation share its timestamp so they group together.
+                ri.setCreationDate(created);
+                ri.setLastModifiedDate(created);
+                items.add(ri);
+            }
+            resultItemRepository.saveAll(items);
+            resultItemRepository.flush();
+
+            ResponseVO<Long> response = new ResponseVO<>();
+            response.setSuccess(true);
+            response.setData(evaluation.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ResponseUtil.getErrorResponse(e));
         }
     }
 
-    /**
-     * GET /evaluation/list?page=1&size=10&orderBy&orderType&idProduct={idProduct}
-     * Returns all evaluations for a given product.
-     */
+    /** Active evaluations of a product, oldest first. */
+    @Transactional(readOnly = true)
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ResponseVO<List<Map<String, Object>>>> listEvaluations(
             @RequestParam(value = "idProduct", required = false) Long idProduct) {
         ResponseVO<List<Map<String, Object>>> response = new ResponseVO<>();
         try {
-            List<EvaluationDO> evaluations = evaluationRepository.findByProductId(idProduct);
+            List<EvaluationDO> evaluations = idProduct == null
+                    ? Collections.emptyList()
+                    : evaluationRepository.findByProductId(idProduct);
             List<Map<String, Object>> result = new ArrayList<>();
             for (EvaluationDO e : evaluations) {
                 result.add(evaluationToMap(e));
@@ -150,29 +164,19 @@ public class EvaluationControllerImpl {
         }
     }
 
-    /**
-     * GET /evaluation/detail?id={id}
-     * Returns a single evaluation by ID, including its result items.
-     */
+    /** One evaluation by id, including its result items. */
+    @Transactional(readOnly = true)
     @GetMapping(value = "/detail", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ResponseVO<Map<String, Object>>> detailEvaluation(
-            @RequestParam("id") Long id) {
-        ResponseVO<Map<String, Object>> response = new ResponseVO<>();
+    public ResponseEntity<ResponseVO<Map<String, Object>>> detailEvaluation(@RequestParam("id") Long id) {
         try {
             EvaluationDO evaluation = evaluationRepository.findById(id);
             if (evaluation == null) {
-                response.setSuccess(false);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                return error(HttpStatus.NOT_FOUND, "NOT_FOUND_ERROR", "Evaluation " + id + " not found");
             }
             Map<String, Object> data = evaluationToMap(evaluation);
+            data.put("resultList", enrich(resultItemRepository.findByEvaluationId(id)));
 
-            List<ResultItemDO> items = resultItemRepository.findByEvaluationId(id);
-            List<Map<String, Object>> itemList = new ArrayList<>();
-            for (ResultItemDO ri : items) {
-                itemList.add(resultItemToMap(ri));
-            }
-            data.put("resultList", itemList);
-
+            ResponseVO<Map<String, Object>> response = new ResponseVO<>();
             response.setSuccess(true);
             response.setData(data);
             return ResponseEntity.ok(response);
@@ -182,9 +186,11 @@ public class EvaluationControllerImpl {
     }
 
     /**
-     * GET /evaluation/listResult?page=1&size=50&orderBy&orderType&idProduct={idProduct}&idIngredient={idIngredient}
-     * Returns result items filtered by product and ingredient.
+     * Result items filtered by product, by ingredient, or by both, in the order
+     * they were saved. Each item also carries ingredientName, productName and
+     * evaluationDate (ISO-8601, UTC).
      */
+    @Transactional(readOnly = true)
     @GetMapping(value = "/listResult", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ResponseVO<List<Map<String, Object>>>> listResult(
             @RequestParam(value = "idProduct", required = false) Long idProduct,
@@ -195,40 +201,13 @@ public class EvaluationControllerImpl {
             if (idProduct != null && idIngredient != null) {
                 items = resultItemRepository.findByProductIdAndSubstanceId(idProduct, idIngredient);
             } else if (idProduct != null) {
-                List<EvaluationDO> evals = evaluationRepository.findByProductId(idProduct);
-                items = new ArrayList<>();
-                for (EvaluationDO e : evals) {
-                    items.addAll(resultItemRepository.findByEvaluationId(e.getId()));
-                }
+                items = resultItemRepository.findByProductId(idProduct);
             } else if (idIngredient != null) {
                 items = resultItemRepository.findBySubstanceId(idIngredient);
             } else {
-                items = new ArrayList<>();
+                items = Collections.emptyList();
             }
-
-            // Build name lookup maps to avoid N+1
-            Map<Long, String> substanceNames = new HashMap<>();
-            Map<Long, String> productNames = new HashMap<>();
-            for (ResultItemDO ri : items) {
-                if (ri.getSubstanceId() != null && !substanceNames.containsKey(ri.getSubstanceId())) {
-                    SubstanceDO s = substanceRepository.findById(ri.getSubstanceId());
-                    if (s != null) substanceNames.put(ri.getSubstanceId(), s.getName());
-                }
-                if (ri.getProductId() != null && !productNames.containsKey(ri.getProductId())) {
-                    ProductDO p = productRepository.findById(ri.getProductId());
-                    if (p != null) productNames.put(ri.getProductId(), p.getName());
-                }
-            }
-
-            List<Map<String, Object>> result = new ArrayList<>();
-            for (ResultItemDO ri : items) {
-                Map<String, Object> m = resultItemToMap(ri);
-                m.put("ingredientName", substanceNames.getOrDefault(ri.getSubstanceId(), "Unknown"));
-                m.put("productName", productNames.getOrDefault(ri.getProductId(), "Unknown"));
-                m.put("evaluationDate", ri.getCreationDate() != null
-                    ? ISO_FMT.format(ri.getCreationDate().toInstant()) : null);
-                result.add(m);
-            }
+            List<Map<String, Object>> result = enrich(items);
             response.setSuccess(true);
             response.setData(result);
             response.setTotalRows((long) result.size());
@@ -240,7 +219,26 @@ public class EvaluationControllerImpl {
 
     // --- helpers ---
 
-    private Map<String, Object> evaluationToMap(EvaluationDO e) {
+    /** Converts result items to maps and adds names and the evaluation date (2 queries in total). */
+    private List<Map<String, Object>> enrich(List<ResultItemDO> items) {
+        Map<Long, String> ingredientNames = nameLookup.ingredientNames(
+                items.stream().map(ResultItemDO::getSubstanceId).collect(Collectors.toList()));
+        Map<Long, String> productNames = nameLookup.productNames(
+                items.stream().map(ResultItemDO::getProductId).collect(Collectors.toList()));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ResultItemDO ri : items) {
+            Map<String, Object> m = resultItemToMap(ri);
+            m.put("ingredientName", ingredientNames.getOrDefault(ri.getSubstanceId(), "Unknown"));
+            m.put("productName", productNames.getOrDefault(ri.getProductId(), "Unknown"));
+            m.put("evaluationDate", ri.getCreationDate() != null
+                ? ISO_FMT.format(ri.getCreationDate().toInstant()) : null);
+            result.add(m);
+        }
+        return result;
+    }
+
+    private static Map<String, Object> evaluationToMap(EvaluationDO e) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", e.getId());
         m.put("idProduct", e.getProductId());
@@ -248,10 +246,12 @@ public class EvaluationControllerImpl {
         m.put("idRecipe", e.getRecipeId());
         m.put("ingredientMeanPercentage", e.getIngredientMeanPercentage());
         m.put("ingredientStdPercentage", e.getIngredientStdPercentage());
+        m.put("evaluationDate", e.getCreationDate() != null
+            ? ISO_FMT.format(e.getCreationDate().toInstant()) : null);
         return m;
     }
 
-    private Map<String, Object> resultItemToMap(ResultItemDO ri) {
+    private static Map<String, Object> resultItemToMap(ResultItemDO ri) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", ri.getId());
         m.put("evaluationId", ri.getEvaluationId());
@@ -263,18 +263,45 @@ public class EvaluationControllerImpl {
         return m;
     }
 
-    private Long toLong(Object value) {
-        if (value == null) return null;
-        if (value instanceof Long) return (Long) value;
-        if (value instanceof Integer) return ((Integer) value).longValue();
-        try { return Long.valueOf(value.toString()); } catch (NumberFormatException e) { return null; }
+    private static <T> ResponseEntity<ResponseVO<T>> error(HttpStatus status, String key, String message) {
+        ResponseVO<T> response = new ResponseVO<>();
+        response.setSuccess(false);
+        response.setErrors(Collections.singletonList(
+                new ResponseErrorVO(String.valueOf(status.value()), key, message, null)));
+        return ResponseEntity.status(status).body(response);
     }
 
-    private Double toDouble(Object value) {
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> toItemList(Object value) {
+        if (!(value instanceof List)) {
+            return Collections.emptyList();
+        }
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Object o : (List<Object>) value) {
+            if (o instanceof Map) {
+                items.add((Map<String, Object>) o);
+            }
+        }
+        return items;
+    }
+
+    @SafeVarargs
+    private static <T> T firstNonNull(T... values) {
+        for (T v : values) {
+            if (v != null) return v;
+        }
+        return null;
+    }
+
+    private static Long toLong(Object value) {
         if (value == null) return null;
-        if (value instanceof Double) return (Double) value;
-        if (value instanceof Integer) return ((Integer) value).doubleValue();
-        if (value instanceof Float) return ((Float) value).doubleValue();
-        try { return Double.valueOf(value.toString()); } catch (NumberFormatException e) { return null; }
+        if (value instanceof Number) return ((Number) value).longValue();
+        try { return Long.valueOf(value.toString().trim()); } catch (NumberFormatException e) { return null; }
+    }
+
+    private static Double toDouble(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).doubleValue();
+        try { return Double.valueOf(value.toString().trim()); } catch (NumberFormatException e) { return null; }
     }
 }

@@ -4,7 +4,6 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import de.pecus.api.constant.DataConstants;
 import de.pecus.api.entities.CategoryDO;
@@ -43,6 +43,7 @@ import de.pecus.api.vo.category.UpdateCategoryRequestVO;
  *
  */
 @Service
+@Transactional
 public class CategoryServiceImpl implements CategoryService {
 
 	@Autowired
@@ -67,7 +68,7 @@ public class CategoryServiceImpl implements CategoryService {
 				// Preparar los datos para actualizar la BB.DD.
 				CategoryDO categoryDO = new CategoryDO();
 				
-				categoryDO.setId(RandomUtils.nextLong());
+
 				categoryDO.setName(request.getParameters().getName());
 				categoryDO.setGeneralIndicator(request.getParameters().isGeneralIndicator());
 				categoryDO.setMilkIndicator(request.getParameters().isMilkIndicator());
@@ -99,14 +100,15 @@ public class CategoryServiceImpl implements CategoryService {
 
 		// Declarar variables
 		ResponseVO<Long> response = new ResponseVO<>();
-		CategoryDO registroDO = new CategoryDO();
+		CategoryDO registroDO;
 
 		// Validar los campos de entrada
 		if (validateParametersUpdate(request, response)) {
 			
 			UpdateCategoryRequestVO parameters = request.getParameters();
 
-			registroDO.setId(parameters.getId());
+			// Load the stored row so creation audit fields are preserved
+			registroDO = categoryRepository.findById(parameters.getId());
 			registroDO.setName(parameters.getName());
 			registroDO.setGeneralIndicator(parameters.getGeneralIndicator());
 			registroDO.setMilkIndicator(parameters.getMilkIndicator());
@@ -237,15 +239,11 @@ public class CategoryServiceImpl implements CategoryService {
 			// ejecucion de la busqueda por el parametro recibido
 			listaCategory = categoryRepository.findList(this.cleanString(normalizedName), pageable);
 
-			// Si no se encontro ningun registro que cumpla la condicion generar error.
- 				if (ValidatorUtil.isNullOrEmpty(listaCategory.getContent())) {
-				ResponseUtil.addError(request, response, FuncionesBusinessError.NOT_FOUND_REGISTER_LIST_ERROR);
-			} else {
-				// Regresar la respuesta correcta con los registros obtenidos.
-				response.setSuccess(true);
-				response.setTotalRows(listaCategory.getTotalElements());
-				response.setData(transformListDO(listaCategory.getContent()));
-			}
+			// An empty result is a valid answer: success with an empty list.
+			// Regresar la respuesta correcta con los registros obtenidos.
+			response.setSuccess(true);
+			response.setTotalRows(listaCategory.getTotalElements());
+			response.setData(transformListDO(listaCategory.getContent()));
 		}
 		return response;
 	}
@@ -348,7 +346,7 @@ public class CategoryServiceImpl implements CategoryService {
 				
 				if (!ValidatorUtil.isNull(categoryBusqueda)) {
 					//Si se encuentra el registro validamos que no sea el mismo Id
-					if (registroUpdate.getId() != categoryBusqueda.getId()) {
+					if (!registroUpdate.getId().equals(categoryBusqueda.getId())) {
 						ResponseUtil.addError(request, response, FuncionesBusinessError.DUPLICATED_ERROR, request);
 						
 					}

@@ -1,0 +1,41 @@
+# Keeps the free-tier services from going dormant:
+#  * Supabase pauses free projects after 7 days without database activity.
+#  * Each run wakes the Render API (cold start) and makes it query the database.
+# The last step re-enables this workflow so GitHub does not suspend the
+# schedule after 60 days without commits.
+name: Keep alive
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      API_URL: ${{ vars.API_URL || 'https://fakethesnackdb-api.onrender.com/user-management' }}
+    steps:
+      - name: Wake the API and touch the database
+        run: |
+          for attempt in $(seq 1 20); do
+            if curl -fsS --max-time 60 "$API_URL/actuator/health"; then
+              echo
+              curl -fsS --max-time 60 "$API_URL/product/list?page=1&size=1&name=" | head -c 300
+              echo
+              exit 0
+            fi
+            echo "API not ready yet (attempt $attempt), retrying in 15s..."
+            sleep 15
+          done
+          echo "API did not become healthy" >&2
+          exit 1
+
+      - name: Keep this scheduled workflow enabled
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable keepalive.yml --repo "$GITHUB_REPOSITORY"

@@ -4,7 +4,6 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import de.pecus.api.constant.DataConstants;
 import de.pecus.api.entities.CategoryDO;
@@ -44,6 +44,7 @@ import de.pecus.api.vo.subCategory.UpdateSubCategoryRequestVO;
  *
  */
 @Service
+@Transactional
 public class SubCategoryServiceImpl implements SubCategoryService {
 
 	@Autowired
@@ -69,7 +70,7 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 				SubCategoryDO subCategoryDO = new SubCategoryDO();
 				CategoryDO categoryDO = new CategoryDO();
 
-				subCategoryDO.setId(RandomUtils.nextLong());
+
 				subCategoryDO.setName(request.getParameters().getName());
 
 				//Preparar el objeto padre para mantener la relación entre Category y SubCategory
@@ -102,7 +103,7 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 
 		// Declarar variables
 		ResponseVO<Long> response = new ResponseVO<>();
-		SubCategoryDO registroDO = new SubCategoryDO();
+		SubCategoryDO registroDO;
 		CategoryDO categoryDO = new CategoryDO();
 
 		// Validar los campos de entrada
@@ -110,7 +111,8 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 			
 			UpdateSubCategoryRequestVO parameters = request.getParameters();
 
-			registroDO.setId(parameters.getId());
+			// Load the stored row so creation audit fields are preserved
+			registroDO = subCategoryRepository.findById(parameters.getId());
 			registroDO.setName(parameters.getName());
 
 			categoryDO.setId(parameters.getIdCategory());
@@ -240,15 +242,11 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 			// ejecucion de la busqueda por el parametro recibido
 			listaSubCategory = subCategoryRepository.findList(this.cleanString(normalizedName),idCategory, pageable);
 
-			// Si no se encontro ningun registro que cumpla la condicion generar error.
- 				if (ValidatorUtil.isNullOrEmpty(listaSubCategory.getContent())) {
-				ResponseUtil.addError(request, response, FuncionesBusinessError.NOT_FOUND_REGISTER_LIST_ERROR);
-			} else {
-				// Regresar la respuesta correcta con los registros obtenidos.
-				response.setSuccess(true);
-				response.setTotalRows(listaSubCategory.getTotalElements());
-				response.setData(transformListDO(listaSubCategory.getContent()));
-			}
+			// An empty result is a valid answer: success with an empty list.
+			// Regresar la respuesta correcta con los registros obtenidos.
+			response.setSuccess(true);
+			response.setTotalRows(listaSubCategory.getTotalElements());
+			response.setData(transformListDO(listaSubCategory.getContent()));
 		}
 		return response;
 	}
@@ -351,7 +349,7 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 				
 				if (!ValidatorUtil.isNull(subCategoryBusqueda)) {
 					//Si se encuentra el registro validamos que no sea el mismo Id
-					if (registroUpdate.getId() != subCategoryBusqueda.getId()) {
+					if (!registroUpdate.getId().equals(subCategoryBusqueda.getId())) {
 						ResponseUtil.addError(request, response, FuncionesBusinessError.DUPLICATED_ERROR, request);
 						
 					}

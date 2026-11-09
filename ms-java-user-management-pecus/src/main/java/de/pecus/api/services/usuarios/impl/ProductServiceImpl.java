@@ -4,7 +4,6 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,16 +11,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import de.pecus.api.constant.DataConstants;
-import de.pecus.api.entities.BrandDO;
-import de.pecus.api.entities.CategoryDO;
 import de.pecus.api.entities.ProductDO;
-import de.pecus.api.entities.SubCategoryDO;
 import de.pecus.api.enums.WildcardTypeEnum;
 import de.pecus.api.error.FuncionesBusinessError;
 import de.pecus.api.error.GeneralBusinessErrors;
+import de.pecus.api.repositories.usuarios.BrandRepository;
+import de.pecus.api.repositories.usuarios.CategoryRepository;
 import de.pecus.api.repositories.usuarios.ProductRepository;
+import de.pecus.api.repositories.usuarios.SubCategoryRepository;
 import de.pecus.api.services.usuarios.ProductService;
 import de.pecus.api.util.CriteriaUtil;
 import de.pecus.api.util.ResponseUtil;
@@ -46,10 +46,23 @@ import de.pecus.api.vo.product.UpdateProductRequestVO;
  *
  */
 @Service
+@Transactional
 public class ProductServiceImpl implements ProductService {
+
+	/** Id of the DEFAULT brand/category/subcategory rows seeded by DataInitializer. */
+	private static final Long DEFAULT_REFERENCE_ID = 1L;
 
 	@Autowired
 	private ProductRepository productRepository;
+
+	@Autowired
+	private BrandRepository brandRepository;
+
+	@Autowired
+	private CategoryRepository categoryRepository;
+
+	@Autowired
+	private SubCategoryRepository subCategoryRepository;
 
 
 	/**
@@ -70,22 +83,15 @@ public class ProductServiceImpl implements ProductService {
 				// Preparar los datos para actualizar la BB.DD.
 				ProductDO productDO = new ProductDO();
 				
-				productDO.setId(RandomUtils.nextLong());
+
 				productDO.setName(request.getParameters().getName());
 				productDO.setDescripcion(request.getParameters().getDescripcion());
 
-				//Creamos las referencias a brand, category y subcategory
-				BrandDO brandDO = new BrandDO();
-				CategoryDO categoryDO = new CategoryDO();
-				SubCategoryDO subCategoryDO = new SubCategoryDO();
-
-				brandDO.setId(request.getParameters().getIdBrand());
-				categoryDO.setId(request.getParameters().getIdCategory());
-				subCategoryDO.setId(request.getParameters().getIdSubCategory());
-
-				productDO.setBrand(brandDO);
-				productDO.setCategory(categoryDO);
-				productDO.setSubCategory(subCategoryDO);
+				// Link brand, category and subcategory (the DEFAULT rows with id 1 when omitted)
+				CreateProductRequestVO parameters = request.getParameters();
+				productDO.setBrand(brandRepository.getReferenceById(orDefault(parameters.getIdBrand())));
+				productDO.setCategory(categoryRepository.getReferenceById(orDefault(parameters.getIdCategory())));
+				productDO.setSubCategory(subCategoryRepository.getReferenceById(orDefault(parameters.getIdSubCategory())));
 
 				// Actualizar los parametros de auditoria
 				ServiceUtil.setAuditFields(productDO, request.getToken());
@@ -113,29 +119,28 @@ public class ProductServiceImpl implements ProductService {
 
 		// Declarar variables
 		ResponseVO<Long> response = new ResponseVO<>();
-		ProductDO registroDO = new ProductDO();
+		ProductDO registroDO;
 
 		// Validar los campos de entrada
 		if (validateParametersUpdate(request, response)) {
 			
 			UpdateProductRequestVO parameters = request.getParameters();
 
-			registroDO.setId(parameters.getId());
+			// Load the stored row so creation audit fields are preserved
+			registroDO = productRepository.findById(parameters.getId());
 			registroDO.setName(parameters.getName());
 			registroDO.setDescripcion(parameters.getDescripcion());
 
-			//Creamos las referencias a brand, category y subcategory
-			BrandDO brandDO = new BrandDO();
-			CategoryDO categoryDO = new CategoryDO();
-			SubCategoryDO subCategoryDO = new SubCategoryDO();
-
-			brandDO.setId(request.getParameters().getIdBrand());
-			categoryDO.setId(request.getParameters().getIdCategory());
-			subCategoryDO.setId(request.getParameters().getIdSubCategory());
-
-			registroDO.setBrand(brandDO);
-			registroDO.setCategory(categoryDO);
-			registroDO.setSubCategory(subCategoryDO);
+			// Only re-link brand, category and subcategory when the caller sends them
+			if (!ValidatorUtil.isNullOrZero(parameters.getIdBrand())) {
+				registroDO.setBrand(brandRepository.getReferenceById(parameters.getIdBrand()));
+			}
+			if (!ValidatorUtil.isNullOrZero(parameters.getIdCategory())) {
+				registroDO.setCategory(categoryRepository.getReferenceById(parameters.getIdCategory()));
+			}
+			if (!ValidatorUtil.isNullOrZero(parameters.getIdSubCategory())) {
+				registroDO.setSubCategory(subCategoryRepository.getReferenceById(parameters.getIdSubCategory()));
+			}
 
 			// Actualizar parametros de auditoria
 			ServiceUtil.setAuditFields(registroDO, request.getToken());
@@ -266,15 +271,11 @@ public class ProductServiceImpl implements ProductService {
 			// ejecucion de la busqueda por el parametro recibido
 			listaProduct = productRepository.findList(this.cleanString(normalizedName), pageable);
 
-			// Si no se encontro ningun registro que cumpla la condicion generar error.
- 				if (ValidatorUtil.isNullOrEmpty(listaProduct.getContent())) {
-				ResponseUtil.addError(request, response, FuncionesBusinessError.NOT_FOUND_REGISTER_LIST_ERROR);
-			} else {
-				// Regresar la respuesta correcta con los registros obtenidos.
-				response.setSuccess(true);
-				response.setTotalRows(listaProduct.getTotalElements());
-				response.setData(transformListDO(listaProduct.getContent()));
-			}
+			// An empty result is a valid answer: success with an empty list.
+			// Regresar la respuesta correcta con los registros obtenidos.
+			response.setSuccess(true);
+			response.setTotalRows(listaProduct.getTotalElements());
+			response.setData(transformListDO(listaProduct.getContent()));
 		}
 		return response;
 	}
@@ -385,7 +386,7 @@ public class ProductServiceImpl implements ProductService {
 				
 				if (!ValidatorUtil.isNull(productBusqueda)) {
 					//Si se encuentra el registro validamos que no sea el mismo Id
-					if (registroUpdate.getId() != productBusqueda.getId()) {
+					if (!registroUpdate.getId().equals(productBusqueda.getId())) {
 						ResponseUtil.addError(request, response, FuncionesBusinessError.DUPLICATED_ERROR, request);
 						
 					}
@@ -505,6 +506,7 @@ public class ProductServiceImpl implements ProductService {
 			productVO.setId(productDO.getId());
 			productVO.setName(productDO.getName());
 			productVO.setDescripcion(productDO.getDescripcion());
+			productVO.setIdBrand(productDO.getBrand().getId());
 			productVO.setNameBrand(productDO.getBrand().getName());
 			productVO.setIdCategory(productDO.getCategory().getId());
 			productVO.setNameCategory(productDO.getCategory().getName());
@@ -553,6 +555,10 @@ public class ProductServiceImpl implements ProductService {
 	}	
 
 
+
+	private static Long orDefault(Long id) {
+		return ValidatorUtil.isNullOrZero(id) ? DEFAULT_REFERENCE_ID : id;
+	}
 
 	public String cleanString(String strInput) {
 		if(!ValidatorUtil.isNullOrEmpty(strInput)) {
