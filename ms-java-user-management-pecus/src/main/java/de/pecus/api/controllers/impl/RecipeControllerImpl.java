@@ -2,7 +2,8 @@ package de.pecus.api.controllers.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,8 +22,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import de.pecus.api.entities.EvaluationDO;
 import de.pecus.api.entities.RecipeDO;
+import de.pecus.api.entities.ResultItemDO;
+import de.pecus.api.repositories.usuarios.EvaluationRepository;
 import de.pecus.api.repositories.usuarios.RecipeRepository;
+import de.pecus.api.repositories.usuarios.ResultItemRepository;
 import de.pecus.api.util.NameLookup;
 import de.pecus.api.util.ResponseUtil;
 import de.pecus.api.util.ServiceUtil;
@@ -45,6 +50,12 @@ public class RecipeControllerImpl {
 
     @Autowired
     private RecipeRepository recipeRepository;
+
+    @Autowired
+    private EvaluationRepository evaluationRepository;
+
+    @Autowired
+    private ResultItemRepository resultItemRepository;
 
     @Autowired
     private NameLookup nameLookup;
@@ -98,8 +109,12 @@ public class RecipeControllerImpl {
     }
 
     /**
-     * Active ingredients of a product, in the order they were added.
+     * Active ingredients of a product in label order (most to least used).
      * Each item: idRecipe, idProduct, idIngredient, nameIngredient.
+     *
+     * The order is taken from the product's latest saved evaluation, which
+     * stores the ingredients exactly as they were entered. Ingredients that
+     * are not part of it (associated later) follow in the order they were added.
      */
     @Transactional(readOnly = true)
     @GetMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -109,7 +124,7 @@ public class RecipeControllerImpl {
         try {
             List<RecipeDO> recipes = idProduct == null
                     ? Collections.emptyList()
-                    : recipeRepository.findByProductId(idProduct);
+                    : inLabelOrder(idProduct, recipeRepository.findByProductId(idProduct));
             Map<Long, String> names = nameLookup.ingredientNames(
                     recipes.stream().map(RecipeDO::getSubstanceId).collect(Collectors.toList()));
 
@@ -175,6 +190,27 @@ public class RecipeControllerImpl {
     }
 
     // --- helpers ---
+
+    /** Sorts recipes by their position in the latest evaluation; the rest keep insertion order. */
+    private List<RecipeDO> inLabelOrder(Long idProduct, List<RecipeDO> recipes) {
+        if (recipes.size() < 2) {
+            return recipes;
+        }
+        EvaluationDO latest = evaluationRepository.findFirstByProductIdAndActiveTrueOrderByIdDesc(idProduct);
+        if (latest == null) {
+            return recipes;
+        }
+        Map<Long, Integer> position = new HashMap<>();
+        List<ResultItemDO> items = resultItemRepository.findByEvaluationId(latest.getId());
+        for (int i = 0; i < items.size(); i++) {
+            position.putIfAbsent(items.get(i).getSubstanceId(), i);
+        }
+        List<RecipeDO> sorted = new ArrayList<>(recipes);
+        sorted.sort(Comparator
+                .comparing((RecipeDO r) -> position.getOrDefault(r.getSubstanceId(), Integer.MAX_VALUE))
+                .thenComparing(RecipeDO::getId));
+        return sorted;
+    }
 
     private static Map<String, Object> toMap(RecipeDO r) {
         Map<String, Object> item = new LinkedHashMap<>();

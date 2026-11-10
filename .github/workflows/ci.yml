@@ -31,3 +31,23 @@ jobs:
       - name: Build the Docker image
         working-directory: .
         run: docker build -t hackthesnackdb-api:ci .
+
+  # Render does not receive push events for this repository, so CI triggers the
+  # deploy itself once the tests pass on main. Set the repository secret
+  # RENDER_DEPLOY_HOOK_URL (Render -> fakethesnackdb-api -> Settings -> Deploy Hook).
+  deploy:
+    name: Deploy to Render
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set; deploy fakethesnackdb-api manually from the Render dashboard."
+            exit 0
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null
+          echo "Render deploy triggered for ${GITHUB_SHA::7}."

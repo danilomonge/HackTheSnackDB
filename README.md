@@ -94,7 +94,7 @@ Names are stored in upper case and must be unique among active rows (max. 100 ch
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/recipe` | Associate `{"idProduct", "idIngredient"}` → `201 {data: idRecipe}`. `400 DUPLICATED_ERROR` if already associated; a removed association is re-activated with its old id |
-| `GET` | `/recipe/list?id={idProduct}` | Active ingredients of a product, in the order they were added: `idRecipe, idProduct, idIngredient, nameIngredient` |
+| `GET` | `/recipe/list?id={idProduct}` | Active ingredients of a product in label order (as in the latest saved evaluation; ingredients added afterwards follow in insertion order): `idRecipe, idProduct, idIngredient, nameIngredient` |
 | `GET` | `/recipe/detailRecipeByProduct?idProduct=&idIngredient=` | One association |
 | `DELETE` | `/recipe/deleteByProduct?idProduct=&idIngredient=` | Remove an ingredient from a product (soft delete) |
 
@@ -200,7 +200,7 @@ The integration tests start a disposable PostgreSQL container (Testcontainers, s
 
 ## Deployment
 
-Merging into `main` triggers an automatic Render deploy of the Docker image (`autoDeploy: true`). Render waits for `/actuator/health` before switching traffic to the new version.
+Every push to `main` runs CI; when the tests pass, its `deploy` job calls the service's Render **Deploy Hook** (repository secret `RENDER_DEPLOY_HOOK_URL`, copied from Render → *fakethesnackdb-api* → *Settings* → *Deploy Hook*). Without the secret the job only prints a warning and the deploy is started from the Render dashboard (*Manual Deploy*). Render builds the Docker image and waits for `/user-management/actuator/health` before switching traffic to the new version.
 
 ## Authors
 
