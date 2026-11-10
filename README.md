@@ -200,7 +200,7 @@ The integration tests start a disposable PostgreSQL container (Testcontainers, s
 
 ## Deployment
 
-Merging into `main` triggers an automatic Render deploy of the Docker image (`autoDeploy: true`). Render waits for `/actuator/health` before switching traffic to the new version.
+Every push to `main` runs CI; when the tests pass, its `deploy` job calls the service's Render **Deploy Hook** (repository secret `RENDER_DEPLOY_HOOK_URL`, copied from Render → *fakethesnackdb-api* → *Settings* → *Deploy Hook*). Without the secret the job only prints a warning and the deploy is started from the Render dashboard (*Manual Deploy*). Render builds the Docker image and waits for `/user-management/actuator/health` before switching traffic to the new version.
 
 ## Authors
 
