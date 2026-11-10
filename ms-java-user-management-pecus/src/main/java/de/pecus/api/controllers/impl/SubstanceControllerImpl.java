@@ -32,8 +32,6 @@ import de.pecus.api.vo.substance.FindDetailSubstanceResponseVO;
 import de.pecus.api.vo.substance.FindListSubstanceRequestVO;
 import de.pecus.api.vo.substance.FindListSubstanceResponseVO;
 import de.pecus.api.vo.substance.UpdateSubstanceRequestVO;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiImplicitParams;
 
 /**
  * Clase de controlador para servicio Rest de Substance.
@@ -57,16 +55,6 @@ public class SubstanceControllerImpl implements SubstanceController {
 	 * Disponible en /substance y /ingredient
 	 */
 	@Override
-	@ApiImplicitParams({
-		@ApiImplicitParam(name = "Authorization", value = "eyJhbGciOiJIUzI1NiJ9.eyJUT0tFTl9EQVRBIjp7ImFwZWxs", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "mac-address", value = " 2C:54:91:88:C9:E3 or 2c-54-91-88-c9-e3", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "request-date", value = "2021-09-07 17:29:25.443", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "latitude", value = "-74.00898606", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "longitude", value = "40.71727401", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "language", value = "es_MX", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
 	@PostMapping(value = {"/substance", "/ingredient"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<Long>> createSubstance(@RequestHeader Map<String, String> headers,
 			@RequestBody CreateSubstanceRequestVO body) {
@@ -96,16 +84,6 @@ public class SubstanceControllerImpl implements SubstanceController {
 	 * Disponible en /substance/{id} y /ingredient/{id}
 	 */
 	@Override
-	@ApiImplicitParams({
-		@ApiImplicitParam(name = "Authorization", value = "eyJhbGciOiJIUzI1NiJ9.eyJUT0tFTl9EQVRBIjp7ImFwZWxs", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "mac-address", value = " 2C:54:91:88:C9:E3 or 2c-54-91-88-c9-e3", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "request-date", value = "2021-09-07 17:29:25.443", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "latitude", value = "-74.00898606", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "longitude", value = "40.71727401", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "language", value = "es_MX", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
 	@PutMapping(value = {"/substance/{id}", "/ingredient/{id}"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<Long>> updateSubstance(@RequestHeader Map<String, String> headers, 
 			@PathVariable(name = "id", required = false) Long id, 
@@ -141,16 +119,6 @@ public class SubstanceControllerImpl implements SubstanceController {
 	 * Disponible en /substance/{id} y /ingredient/{id}
 	 */
 	@Override
-	@ApiImplicitParams({
-		@ApiImplicitParam(name = "Authorization", value = "eyJhbGciOiJIUzI1NiJ9.eyJUT0tFTl9EQVRBIjp7ImFwZWxs", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "mac-address", value = " 2C:54:91:88:C9:E3 or 2c-54-91-88-c9-e3", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "request-date", value = "2021-09-07 17:29:25.443", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "latitude", value = "-74.00898606", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "longitude", value = "40.71727401", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "language", value = "es_MX", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
 	@DeleteMapping(value = {"/substance/{id}", "/ingredient/{id}"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<Boolean>> deleteSubstance(@RequestHeader Map<String, String> headers,
 			@PathVariable("id") Long id) {
@@ -183,16 +151,6 @@ public class SubstanceControllerImpl implements SubstanceController {
 	 * Disponible en /substance/detail y /ingredient/detail
 	 */
 	@Override
-	@ApiImplicitParams({
-		@ApiImplicitParam(name = "Authorization", value = "eyJhbGciOiJIUzI1NiJ9.eyJUT0tFTl9EQVRBIjp7ImFwZWxs", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "mac-address", value = " 2C:54:91:88:C9:E3 or 2c-54-91-88-c9-e3", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "request-date", value = "2021-09-07 17:29:25.443", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "latitude", value = "-74.00898606", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "longitude", value = "40.71727401", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "language", value = "es_MX", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
 	@GetMapping(value = {"/substance/detail", "/ingredient/detail"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<FindDetailSubstanceResponseVO>> findDetailSubstance(
 			@RequestHeader Map<String, String> headers, 
@@ -229,16 +187,6 @@ public class SubstanceControllerImpl implements SubstanceController {
 	 * Disponible en /substance/list y /ingredient/list
 	 */
 	@Override
-	@ApiImplicitParams({
-		@ApiImplicitParam(name = "Authorization", value = "eyJhbGciOiJIUzI1NiJ9.eyJUT0tFTl9EQVRBIjp7ImFwZWxs", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "mac-address", value = " 2C:54:91:88:C9:E3 or 2c-54-91-88-c9-e3", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "request-date", value = "2021-09-07 17:29:25.443", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "latitude", value = "-74.00898606", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "longitude", value = "40.71727401", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "language", value = "es_MX", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "time-zone", value = "America/Mexico City", paramType = "header", dataTypeClass = String.class),
-		@ApiImplicitParam(name = "id-client-invoke", value = "21", paramType = "header", dataTypeClass = String.class, required = true),
-		@ApiImplicitParam(name = "client-operation-code", value = "qWERGFDSRSGfsdertRTRe2345RTd", paramType = "header", dataTypeClass = String.class, required = true) })
 	@GetMapping(value = {"/substance/list", "/ingredient/list"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ResponseVO<List<FindListSubstanceResponseVO>>> findListSubstance(
 			@RequestHeader Map<String, String> headers, 

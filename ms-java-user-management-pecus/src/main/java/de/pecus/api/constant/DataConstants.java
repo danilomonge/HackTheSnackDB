@@ -10,7 +10,7 @@ public final class DataConstants {
 	/**
 	 * Tamanno maximo para el atributo Id_Nombre
 	 */
-	public static final int MAX_SIZE_ID_NOMBRE = 20;
+	public static final int MAX_SIZE_ID_NOMBRE = 100;
 
 	/**
 	 * Tamanno maximo para el atributo Descripcion

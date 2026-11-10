@@ -4,7 +4,6 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import de.pecus.api.constant.DataConstants;
 import de.pecus.api.entities.BrandDO;
@@ -43,6 +43,7 @@ import de.pecus.api.vo.brand.UpdateBrandRequestVO;
  *
  */
 @Service
+@Transactional
 public class BrandServiceImpl implements BrandService {
 
 	@Autowired
@@ -67,7 +68,7 @@ public class BrandServiceImpl implements BrandService {
 				// Preparar los datos para actualizar la BB.DD.
 				BrandDO brandDO = new BrandDO();
 				
-				brandDO.setId(RandomUtils.nextLong());
+
 				brandDO.setName(request.getParameters().getName());
 				brandDO.setDescription(request.getParameters().getDescription());
 				
@@ -97,14 +98,15 @@ public class BrandServiceImpl implements BrandService {
 
 		// Declarar variables
 		ResponseVO<Long> response = new ResponseVO<>();
-		BrandDO registroDO = new BrandDO();
+		BrandDO registroDO;
 
 		// Validar los campos de entrada
 		if (validateParametersUpdate(request, response)) {
 			
 			UpdateBrandRequestVO parameters = request.getParameters();
 
-			registroDO.setId(parameters.getId());
+			// Load the stored row so creation audit fields are preserved
+			registroDO = brandRepository.findById(parameters.getId());
 			registroDO.setName(parameters.getName());
 			registroDO.setDescription(parameters.getDescription());
 			
@@ -231,15 +233,11 @@ public class BrandServiceImpl implements BrandService {
 			// ejecucion de la busqueda por el parametro recibido
 			listaBrand = brandRepository.findList(this.cleanString(normalizedName), pageable);
 
-			// Si no se encontro ningun registro que cumpla la condicion generar error.
- 				if (ValidatorUtil.isNullOrEmpty(listaBrand.getContent())) {
-				ResponseUtil.addError(request, response, FuncionesBusinessError.NOT_FOUND_REGISTER_LIST_ERROR);
-			} else {
-				// Regresar la respuesta correcta con los registros obtenidos.
-				response.setSuccess(true);
-				response.setTotalRows(listaBrand.getTotalElements());
-				response.setData(transformListDO(listaBrand.getContent()));
-			}
+			// An empty result is a valid answer: success with an empty list.
+			// Regresar la respuesta correcta con los registros obtenidos.
+			response.setSuccess(true);
+			response.setTotalRows(listaBrand.getTotalElements());
+			response.setData(transformListDO(listaBrand.getContent()));
 		}
 		return response;
 	}
@@ -350,7 +348,7 @@ public class BrandServiceImpl implements BrandService {
 				
 				if (!ValidatorUtil.isNull(brandBusqueda)) {
 					//Si se encuentra el registro validamos que no sea el mismo Id
-					if (registroUpdate.getId() != brandBusqueda.getId()) {
+					if (!registroUpdate.getId().equals(brandBusqueda.getId())) {
 						ResponseUtil.addError(request, response, FuncionesBusinessError.DUPLICATED_ERROR, request);
 						
 					}
@@ -494,7 +492,8 @@ public class BrandServiceImpl implements BrandService {
 					registro = null;
 				} else {
 					//Buscamos por nombre
-					registro = brandRepository.findByName(name);
+					// Names are stored upper-case: match regardless of case and surrounding spaces.
+					registro = brandRepository.findByName(StringUtil.toUpperCase(name.trim()));
 				}
 			} else {
 				//Consulta

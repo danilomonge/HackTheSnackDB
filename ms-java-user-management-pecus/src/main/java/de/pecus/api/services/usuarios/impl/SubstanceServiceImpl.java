@@ -4,7 +4,6 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.math.RandomUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import de.pecus.api.constant.DataConstants;
 import de.pecus.api.entities.SubstanceDO;
@@ -43,6 +43,7 @@ import de.pecus.api.vo.substance.UpdateSubstanceRequestVO;
  *
  */
 @Service
+@Transactional
 public class SubstanceServiceImpl implements SubstanceService {
 
 	@Autowired
@@ -67,7 +68,7 @@ public class SubstanceServiceImpl implements SubstanceService {
 				// Preparar los datos para actualizar la BB.DD.
 				SubstanceDO substanceDO = new SubstanceDO();
 				
-				substanceDO.setId(RandomUtils.nextLong());
+
 				substanceDO.setName(request.getParameters().getName());
 				substanceDO.setDescription(request.getParameters().getDescription());
 				
@@ -97,14 +98,15 @@ public class SubstanceServiceImpl implements SubstanceService {
 
 		// Declarar variables
 		ResponseVO<Long> response = new ResponseVO<>();
-		SubstanceDO registroDO = new SubstanceDO();
+		SubstanceDO registroDO;
 
 		// Validar los campos de entrada
 		if (validateParametersUpdate(request, response)) {
 			
 			UpdateSubstanceRequestVO parameters = request.getParameters();
 
-			registroDO.setId(parameters.getId());
+			// Load the stored row so creation audit fields are preserved
+			registroDO = substanceRepository.findById(parameters.getId());
 			registroDO.setName(parameters.getName());
 			registroDO.setDescription(parameters.getDescription());
 			
@@ -231,15 +233,11 @@ public class SubstanceServiceImpl implements SubstanceService {
 			// ejecucion de la busqueda por el parametro recibido
 			listaSubstance = substanceRepository.findList(this.cleanString(normalizedName), pageable);
 
-			// Si no se encontro ningun registro que cumpla la condicion generar error.
- 				if (ValidatorUtil.isNullOrEmpty(listaSubstance.getContent())) {
-				ResponseUtil.addError(request, response, FuncionesBusinessError.NOT_FOUND_REGISTER_LIST_ERROR);
-			} else {
-				// Regresar la respuesta correcta con los registros obtenidos.
-				response.setSuccess(true);
-				response.setTotalRows(listaSubstance.getTotalElements());
-				response.setData(transformListDO(listaSubstance.getContent()));
-			}
+			// An empty result is a valid answer: success with an empty list.
+			// Regresar la respuesta correcta con los registros obtenidos.
+			response.setSuccess(true);
+			response.setTotalRows(listaSubstance.getTotalElements());
+			response.setData(transformListDO(listaSubstance.getContent()));
 		}
 		return response;
 	}
@@ -350,7 +348,7 @@ public class SubstanceServiceImpl implements SubstanceService {
 				
 				if (!ValidatorUtil.isNull(substanceBusqueda)) {
 					//Si se encuentra el registro validamos que no sea el mismo Id
-					if (registroUpdate.getId() != substanceBusqueda.getId()) {
+					if (!registroUpdate.getId().equals(substanceBusqueda.getId())) {
 						ResponseUtil.addError(request, response, FuncionesBusinessError.DUPLICATED_ERROR, request);
 						
 					}
@@ -494,7 +492,8 @@ public class SubstanceServiceImpl implements SubstanceService {
 					registro = null;
 				} else {
 					//Buscamos por nombre
-					registro = substanceRepository.findByName(name);
+					// Names are stored upper-case: match regardless of case and surrounding spaces.
+					registro = substanceRepository.findByName(StringUtil.toUpperCase(name.trim()));
 				}
 			} else {
 				//Consulta

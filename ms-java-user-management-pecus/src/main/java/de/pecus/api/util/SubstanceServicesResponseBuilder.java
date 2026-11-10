@@ -4,8 +4,6 @@ import de.pecus.api.error.FuncionesBusinessError;
 import de.pecus.api.error.GeneralBusinessErrors;
 import de.pecus.api.vo.ResponseErrorVO;
 import de.pecus.api.vo.ResponseVO;
-import de.pecus.api.vo.funciones.FindDetailFuncionResponseVO;
-import de.pecus.api.vo.funciones.FindListFuncionResponseVO;
 import de.pecus.api.vo.substance.FindDetailSubstanceResponseVO;
 import de.pecus.api.vo.substance.FindListSubstanceResponseVO;
 import org.springframework.http.HttpStatus;
@@ -105,35 +103,6 @@ public class SubstanceServicesResponseBuilder {
 	}
 
 
-	/**
-	 * Método para analizar la respuesta del servicio y transformarla a la respuesta
-	 * del protocolo de salida
-	 * 
-	 */
-	public static final ResponseEntity<ResponseVO<FindDetailFuncionResponseVO>> buildFindDetailFuncionResponse(
-			ResponseVO<FindDetailFuncionResponseVO> serviceResponse) {
-
-		ResponseEntity<ResponseVO<FindDetailFuncionResponseVO>> response = null;
-
-		if (ValidatorUtil.isSuccessfulResponse(serviceResponse)) {
-			response = ResponseEntity.status(HttpStatus.OK).body(serviceResponse);
-		} else {
-			for (ResponseErrorVO responseErrorVO : serviceResponse.getErrors()) {
-				if (responseErrorVO.getKey().equals(GeneralBusinessErrors.REQUIRED_PARAMETERS_ERROR)
-						|| responseErrorVO.getKey().equals(FuncionesBusinessError.REQUIRED_ID_ERROR)) {
-					response = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(serviceResponse);
-					break;
-				} else if (responseErrorVO.getKey().equals(FuncionesBusinessError.NOT_FOUND_ERROR)) {
-					response = ResponseEntity.status(HttpStatus.NOT_FOUND).body(serviceResponse);
-					break;
-				} else {
-					response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(serviceResponse);
-					break;
-				}
-			}
-		}
-		return response;
-	}
 
 	/**
 	 * Método para analizar la respuesta del servicio y transformarla a la respuesta
