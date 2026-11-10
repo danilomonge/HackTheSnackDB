@@ -1,14 +1,23 @@
-# Keeps the free-tier services from going dormant:
-#  * Supabase pauses free projects after 7 days without database activity.
-#  * Each run wakes the Render API (cold start) and makes it query the database.
+# Keeps the free-tier services responsive:
+#  * Daytime (05:03-21:53 UTC, i.e. about 06:00-23:00 in Germany): a ping every
+#    10 minutes keeps the Render API from spinning down (it sleeps after 15 idle
+#    minutes and then needs about a minute to start), so visitors never wait
+#    for a cold start. That is ~17 h/day (~520 instance hours a month), inside
+#    Render's 750 free hours per workspace with room left for the nutrition proxy.
+#  * Every run also queries the database, so the free Supabase project is never
+#    paused (it pauses after 7 days without activity).
 # The last step re-enables this workflow so GitHub does not suspend the
 # schedule after 60 days without commits.
 name: Keep alive
 
 on:
   schedule:
-    - cron: "17 6 * * *" # daily, 06:17 UTC
+    - cron: "3-59/10 5-21 * * *" # every 10 minutes, 05:03-21:53 UTC
   workflow_dispatch:
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
 
 permissions:
   actions: write
