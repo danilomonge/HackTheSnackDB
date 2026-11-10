@@ -9,7 +9,7 @@ The API stores the **products**, their **ingredients**, the **recipes** (which i
 | Live API | `https://fakethesnackdb-api.onrender.com/user-management` |
 | API docs (Swagger UI) | `https://fakethesnackdb-api.onrender.com/user-management/swagger-ui.html` |
 | Health check | `https://fakethesnackdb-api.onrender.com/user-management/actuator/health` |
-| Database | PostgreSQL on **Supabase** (free plan) |
+| Database | PostgreSQL 17 on **Supabase** (free plan), region `us-west-2` (Oregon), next to the API |
 | Hosting | **Render** free web service (Docker), region Oregon |
 
 > Render's free plan stops the service after 15 minutes without traffic. The first request after that takes about 30–60 seconds while it starts again. The frontend waits for it.
@@ -153,12 +153,14 @@ Everything is configured through environment variables (see [`application.yml`](
 4. Set these variables on the Render service:
 
    ```
-   DB_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+   DB_URL=jdbc:postgresql://aws-<n>-<region>.pooler.supabase.com:5432/postgres?sslmode=require
    DB_USERNAME=postgres.<project-ref>
    DB_PASSWORD=<database password>
    ```
 
-The tables have row-level security enabled without policies. That blocks Supabase's public Data API (`anon` / `authenticated` keys), so only this API, which connects as the table owner, can read or write them.
+   Copy the host exactly as the dashboard shows it (for example `aws-1-us-west-2.pooler.supabase.com`); the `aws-0` / `aws-1` prefix differs between projects.
+
+The tables have row-level security enabled without policies, and `schema.sql` revokes every table privilege from the `anon` and `authenticated` roles. Supabase's public Data API therefore answers `permission denied` for these tables; only this API, which connects as the table owner, can read or write them.
 
 Free Supabase projects pause after 7 days without activity. The [`keepalive`](.github/workflows/keepalive.yml) workflow prevents that by calling the API once a day.
 

@@ -492,7 +492,8 @@ public class SubstanceServiceImpl implements SubstanceService {
 					registro = null;
 				} else {
 					//Buscamos por nombre
-					registro = substanceRepository.findByName(name);
+					// Names are stored upper-case: match regardless of case and surrounding spaces.
+					registro = substanceRepository.findByName(StringUtil.toUpperCase(name.trim()));
 				}
 			} else {
 				//Consulta

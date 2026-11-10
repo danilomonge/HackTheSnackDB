@@ -139,7 +139,7 @@ public final class StringUtil {
 	public static String toUpperCase(String str) {
 		String formatStr = null;
 		if (str != null) {
-			formatStr = str.toUpperCase();
+			formatStr = str.toUpperCase(java.util.Locale.ROOT);
 		}
 		return formatStr;
 	}

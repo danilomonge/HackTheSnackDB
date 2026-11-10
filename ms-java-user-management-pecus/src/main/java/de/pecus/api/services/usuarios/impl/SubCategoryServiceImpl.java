@@ -484,7 +484,8 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 					registro = null;
 				} else {
 					//Buscamos por nombre
-					registro = subCategoryRepository.findByName(name);
+					// Names are stored upper-case: match regardless of case and surrounding spaces.
+					registro = subCategoryRepository.findByName(StringUtil.toUpperCase(name.trim()));
 				}
 			} else {
 				//Consulta

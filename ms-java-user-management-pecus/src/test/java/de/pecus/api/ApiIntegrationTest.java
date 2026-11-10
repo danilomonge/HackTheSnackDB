@@ -118,6 +118,20 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void detailLookupByNameIgnoresCaseAndSurroundingSpaces() throws Exception {
+        long ingredientId = createIngredient("Crème fraîche");
+        mvc.perform(get("/ingredient/detail").param("name", "  crème Fraîche "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is((int) ingredientId)))
+                .andExpect(jsonPath("$.data.name", is("CRÈME FRAÎCHE")));
+
+        long productId = createProduct("M&M's Peanut");
+        mvc.perform(get("/product/detail").param("name", "m&m's peanut"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is((int) productId)));
+    }
+
+    @Test
     void duplicatesAreRejectedWithBadRequest() throws Exception {
         createIngredient("Sugar");
         mvc.perform(post("/ingredient").contentType(MediaType.APPLICATION_JSON)

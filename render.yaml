@@ -13,7 +13,7 @@ services:
     autoDeploy: true
     envVars:
       # Supabase -> Project -> Connect -> "Session pooler" (IPv4, port 5432):
-      #   jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+      #   jdbc:postgresql://aws-<n>-<region>.pooler.supabase.com:5432/postgres?sslmode=require
       - key: DB_URL
         sync: false
       # Session pooler user: postgres.<project-ref>

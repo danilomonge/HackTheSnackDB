@@ -492,7 +492,8 @@ public class BrandServiceImpl implements BrandService {
 					registro = null;
 				} else {
 					//Buscamos por nombre
-					registro = brandRepository.findByName(name);
+					// Names are stored upper-case: match regardless of case and surrounding spaces.
+					registro = brandRepository.findByName(StringUtil.toUpperCase(name.trim()));
 				}
 			} else {
 				//Consulta

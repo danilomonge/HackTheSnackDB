@@ -483,7 +483,8 @@ public class CategoryServiceImpl implements CategoryService {
 					registro = null;
 				} else {
 					//Buscamos por nombre
-					registro = categoryRepository.findByName(name);
+					// Names are stored upper-case: match regardless of case and surrounding spaces.
+					registro = categoryRepository.findByName(StringUtil.toUpperCase(name.trim()));
 				}
 			} else {
 				//Consulta

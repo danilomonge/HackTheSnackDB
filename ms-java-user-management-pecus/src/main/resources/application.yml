@@ -5,7 +5,7 @@
 # PostgreSQL (see README: "Run locally").
 #
 # Database connection (pick one style):
-#   DB_URL       full JDBC URL, e.g. jdbc:postgresql://aws-0-us-west-1.pooler.supabase.com:5432/postgres?sslmode=require
+#   DB_URL       full JDBC URL, e.g. jdbc:postgresql://aws-1-us-west-2.pooler.supabase.com:5432/postgres?sslmode=require
 #   DB_USERNAME  database user (Supabase session pooler: postgres.<project-ref>)
 #   DB_PASSWORD  database password
 # or the libpq-style variables PGHOST / PGPORT / PGDATABASE / PGUSER / PGPASSWORD / PGSSLMODE.

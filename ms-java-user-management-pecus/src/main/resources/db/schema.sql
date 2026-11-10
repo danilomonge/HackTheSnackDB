@@ -168,6 +168,22 @@ ALTER TABLE recipe      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evaluation  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE result_item ENABLE ROW LEVEL SECURITY;
 
+-- Defence in depth: the public API roles get no table privileges at all
+-- (RLS does not cover TRUNCATE). Skipped where the roles do not exist.
+DO $$
+DECLARE
+    api_role text;
+BEGIN
+    FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = api_role) THEN
+            EXECUTE format('REVOKE ALL ON TABLE brand, category, subcategory, product, substance, '
+                           'recipe, evaluation, result_item FROM %I', api_role);
+            EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM %I', api_role);
+        END IF;
+    END LOOP;
+END
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Default catalog rows. The frontend creates every product with
 -- brand = category = subcategory = 1, so these rows must exist.
