@@ -183,6 +183,45 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void recipeListFollowsTheLabelOrderOfTheLatestSavedEvaluation() throws Exception {
+        long product = createProduct("Granola");
+        long oats = createIngredient("Oats");
+        long honey = createIngredient("Honey");
+        long salt = createIngredient("Salt");
+        long rOats = associate(product, oats);
+        long rHoney = associate(product, honey);
+        long rSalt = associate(product, salt);
+        saveEvaluation(product, new long[][] {{rOats, oats}, {rHoney, honey}, {rSalt, salt}});
+
+        // Saved again with a new ingredient inserted in the middle of the label
+        // and honey moved behind it: the new association gets the highest id.
+        long almonds = createIngredient("Almonds");
+        long rAlmonds = associate(product, almonds);
+        saveEvaluation(product, new long[][] {{rOats, oats}, {rAlmonds, almonds}, {rHoney, honey}, {rSalt, salt}});
+
+        mvc.perform(get("/recipe/list?id=" + product))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].nameIngredient", contains("OATS", "ALMONDS", "HONEY", "SALT")));
+
+        // Ingredients associated after the latest evaluation follow in insertion order.
+        long sugar = createIngredient("Sugar");
+        associate(product, sugar);
+        mvc.perform(get("/recipe/list?id=" + product))
+                .andExpect(jsonPath("$.data[*].nameIngredient", contains("OATS", "ALMONDS", "HONEY", "SALT", "SUGAR")));
+    }
+
+    private void saveEvaluation(long product, long[][] recipeAndIngredient) throws Exception {
+        StringBuilder items = new StringBuilder();
+        for (long[] pair : recipeAndIngredient) {
+            if (items.length() > 0) items.append(',');
+            items.append("{\"recipeId\":").append(pair[0]).append(",\"ingredientId\":").append(pair[1])
+                 .append(",\"ingredientMeanPercentage\":10,\"ingredientStdPercentage\":1}");
+        }
+        call(post("/evaluation").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"idProduct\":" + product + ",\"resultList\":[" + items + "]}"), 201);
+    }
+
+    @Test
     void duplicateAssociationReturns400AndDetailReturnsTheRecipe() throws Exception {
         long product = createProduct("Peanut Butter");
         long peanuts = createIngredient("Peanuts");

@@ -17,4 +17,7 @@ public interface EvaluationRepository extends JpaRepository<EvaluationDO, Serial
 
     @Query("SELECT e FROM EvaluationDO e WHERE e.active = true AND e.id = :id")
     EvaluationDO findById(@Param("id") Long id);
+
+    /** The most recently saved active evaluation of a product, or null. */
+    EvaluationDO findFirstByProductIdAndActiveTrueOrderByIdDesc(Long productId);
 }
