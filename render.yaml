@@ -28,7 +28,13 @@ services:
         sync: false
       - key: DEEPL_API_KEY
         sync: false
-      # The API pings this URL every 10 minutes from 06:00 to 23:00 Europe/Berlin
-      # so the free instance does not spin down during the day (KeepAwakePinger).
+      # The API pings this URL every 10 minutes so the free instance never spins
+      # down (KeepAwakePinger). It is the workspace's only free service, so
+      # running 24/7 (max. 744 h a month) fits Render's 750 free instance hours.
+      # If another free service is added, restrict the window (e.g. 6-23).
       - key: KEEP_AWAKE_URL
         value: https://fakethesnackdb-api.onrender.com/user-management/actuator/health
+      - key: KEEP_AWAKE_FROM_HOUR
+        value: "0"
+      - key: KEEP_AWAKE_UNTIL_HOUR
+        value: "24"

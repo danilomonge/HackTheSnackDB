@@ -53,6 +53,16 @@ class KeepAwakePingerTest {
     }
 
     @Test
+    void windowZeroToTwentyFourKeepsItAwakeAroundTheClock() {
+        List<String> pinged = new ArrayList<>();
+        for (String instant : new String[] {"2026-11-11T23:30:00Z", "2026-11-11T02:00:00Z", "2026-11-11T12:00:00Z"}) {
+            Clock clock = Clock.fixed(Instant.parse(instant), ZoneId.of("UTC"));
+            assertTrue(new KeepAwakePinger("https://api.test/health", BERLIN, 0, 24, clock, pinged::add).pingIfDaytime());
+        }
+        assertEquals(3, pinged.size());
+    }
+
+    @Test
     void disabledWithoutUrl() {
         List<String> pinged = new ArrayList<>();
         assertFalse(pinger("", "2026-11-11T10:00:00Z", pinged).pingIfDaytime());
