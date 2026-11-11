@@ -12,7 +12,7 @@ The API stores the **products**, their **ingredients**, the **recipes** (which i
 | Database | PostgreSQL 17 on **Supabase** (free plan), region `us-west-2` (Oregon), next to the API |
 | Hosting | **Render** free web service (Docker), region Oregon |
 
-> Render's free plan stops the service after 15 minutes without traffic; starting again takes about a minute. From 06:00 to 23:00 (Europe/Berlin) the API keeps itself awake by calling its own health URL every 10 minutes (`KeepAwakePinger`, env `KEEP_AWAKE_URL`), and an hourly [`keepalive`](.github/workflows/keepalive.yml) run wakes it in the morning. At night it sleeps; the first request then takes up to a minute and the frontend shows a progress bar while it waits.
+> Render's free plan stops a service after 15 minutes without traffic, and starting again takes about a minute. The API keeps itself awake around the clock by calling its own health URL every 10 minutes (`KeepAwakePinger`, env `KEEP_AWAKE_URL`, window `KEEP_AWAKE_FROM_HOUR=0` – `KEEP_AWAKE_UNTIL_HOUR=24`). It is the workspace's only free service, so that is at most 744 instance hours a month, inside Render's 750 free hours. If you add another free service, narrow the window (e.g. 6–23). An hourly [`keepalive`](.github/workflows/keepalive.yml) run is a backup wake-up after restarts.
 
 ---
 
@@ -155,7 +155,7 @@ Everything is configured through environment variables (see [`application.yml`](
 | `USDA_API_KEY` | empty | USDA FoodData Central key for `/api/nutrition` (free at https://fdc.nal.usda.gov/api-key-signup) |
 | `DEEPL_API_KEY` | empty | DeepL key for `/api/translate` (Free keys end in `:fx`; the right host is chosen automatically) |
 | `KEEP_AWAKE_URL` | empty (off) | Public health URL the API pings every 10 min to stay awake on Render's free plan |
-| `KEEP_AWAKE_ZONE`, `KEEP_AWAKE_FROM_HOUR`, `KEEP_AWAKE_UNTIL_HOUR` | `Europe/Berlin`, `6`, `23` | Daily window for those pings (about 17 h ≈ 520 of the 750 free Render hours a month) |
+| `KEEP_AWAKE_ZONE`, `KEEP_AWAKE_FROM_HOUR`, `KEEP_AWAKE_UNTIL_HOUR` | `Europe/Berlin`, `6`, `23` | Daily window for those pings. Production uses `0`–`24` (always awake, ≤ 744 of the 750 free hours) because the API is the workspace's only free service |
 
 ---
 
@@ -176,7 +176,7 @@ Everything is configured through environment variables (see [`application.yml`](
 
 The tables have row-level security enabled without policies, and `schema.sql` revokes every table privilege from the `anon` and `authenticated` roles. Supabase's public Data API therefore answers `permission denied` for these tables; only this API, which connects as the table owner, can read or write them.
 
-Free Supabase projects pause after 7 days without activity. The [`keepalive`](.github/workflows/keepalive.yml) workflow prevents that: every run queries the database through the API. The API's daytime self-pings (~17 h/day ≈ 520 Render instance hours a month) stay inside Render's 750 free hours per workspace, leaving room for the nutrition proxy.
+Free Supabase projects pause after 7 days without activity. The [`keepalive`](.github/workflows/keepalive.yml) workflow prevents that: every run queries the database through the API. The API's self-pings keep it running around the clock, which stays inside Render's 750 free hours per workspace as long as it is the only free service there.
 
 ---
 
