@@ -23,3 +23,7 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGINS
         value: https://danilomonge.github.io,http://localhost:*,http://127.0.0.1:*
+      # The API pings this URL every 10 minutes from 06:00 to 23:00 Europe/Berlin
+      # so the free instance does not spin down during the day (KeepAwakePinger).
+      - key: KEEP_AWAKE_URL
+        value: https://fakethesnackdb-api.onrender.com/user-management/actuator/health

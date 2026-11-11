@@ -1,9 +1,9 @@
-# Keeps the free-tier services responsive:
-#  * Daytime (05:03-21:53 UTC, i.e. about 06:00-23:00 in Germany): a ping every
-#    10 minutes keeps the Render API from spinning down (it sleeps after 15 idle
-#    minutes and then needs about a minute to start), so visitors never wait
-#    for a cold start. That is ~17 h/day (~520 instance hours a month), inside
-#    Render's 750 free hours per workspace with room left for the nutrition proxy.
+# Backup wake-up for the free-tier services:
+#  * The API keeps itself awake from 06:00 to 23:00 (Europe/Berlin) by pinging
+#    its own URL (KeepAwakePinger, env KEEP_AWAKE_URL). This hourly run wakes it
+#    in the morning (or after a restart) so that loop starts without waiting
+#    for the first visitor. GitHub runs frequent schedules unreliably, which is
+#    why the API does not depend on this workflow for the 10-minute pings.
 #  * Every run also queries the database, so the free Supabase project is never
 #    paused (it pauses after 7 days without activity).
 # The last step re-enables this workflow so GitHub does not suspend the
@@ -12,7 +12,7 @@ name: Keep alive
 
 on:
   schedule:
-    - cron: "3-59/10 5-21 * * *" # every 10 minutes, 05:03-21:53 UTC
+    - cron: "7 5-21 * * *" # hourly, 05:07-21:07 UTC
   workflow_dispatch:
 
 concurrency:

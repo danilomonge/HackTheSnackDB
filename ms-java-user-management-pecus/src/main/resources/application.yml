@@ -52,6 +52,14 @@ spring:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://danilomonge.github.io,http://localhost:*,http://127.0.0.1:*}
+  # Keeps the free Render instance awake during the day by calling its own
+  # public URL (see KeepAwakePinger). Empty = disabled (local runs, tests).
+  keep-awake:
+    url: ${KEEP_AWAKE_URL:}
+    zone: ${KEEP_AWAKE_ZONE:Europe/Berlin}
+    from-hour: ${KEEP_AWAKE_FROM_HOUR:6}
+    until-hour: ${KEEP_AWAKE_UNTIL_HOUR:23}
+    interval: PT10M
 
 management:
   endpoints:
