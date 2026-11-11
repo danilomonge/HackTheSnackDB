@@ -38,7 +38,8 @@ jobs:
   deploy:
     name: Deploy to Render
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Pushes to main deploy automatically; "Run workflow" on main redeploys by hand.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger the Render deploy hook
