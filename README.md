@@ -12,7 +12,7 @@ The API stores the **products**, their **ingredients**, the **recipes** (which i
 | Database | PostgreSQL 17 on **Supabase** (free plan), region `us-west-2` (Oregon), next to the API |
 | Hosting | **Render** free web service (Docker), region Oregon |
 
-> Render's free plan stops the service after 15 minutes without traffic; starting again takes about a minute. During the day (about 06:00–23:00 German time) the [`keepalive`](.github/workflows/keepalive.yml) workflow pings the API every 10 minutes so it never sleeps. At night the first request may take up to a minute; the frontend shows a progress bar and waits.
+> Render's free plan stops the service after 15 minutes without traffic; starting again takes about a minute. From 06:00 to 23:00 (Europe/Berlin) the API keeps itself awake by calling its own health URL every 10 minutes (`KeepAwakePinger`, env `KEEP_AWAKE_URL`), and an hourly [`keepalive`](.github/workflows/keepalive.yml) run wakes it in the morning. At night it sleeps; the first request then takes up to a minute and the frontend shows a progress bar while it waits.
 
 ---
 
@@ -41,7 +41,7 @@ HackTheSnackDB/
 ├── render.yaml                   # Render Blueprint (service + env vars)
 ├── .github/workflows/
 │   ├── ci.yml                    # build + integration tests on every push / PR
-│   └── keepalive.yml             # daytime pings: API never sleeps, Supabase never pauses
+│   └── keepalive.yml             # hourly wake-up; Supabase never pauses
 └── ms-java-user-management-pecus/
     ├── pom.xml
     └── src/
@@ -142,6 +142,8 @@ Everything is configured through environment variables (see [`application.yml`](
 | `CORS_ALLOWED_ORIGINS` | `https://danilomonge.github.io,http://localhost:*,http://127.0.0.1:*` | Origins allowed to call the API from a browser |
 | `PORT` | `8087` | HTTP port (Render sets it automatically) |
 | `JPA_DDL_AUTO` | `validate` | Leave as is in production |
+| `KEEP_AWAKE_URL` | empty (off) | Public health URL the API pings every 10 min to stay awake on Render's free plan |
+| `KEEP_AWAKE_ZONE`, `KEEP_AWAKE_FROM_HOUR`, `KEEP_AWAKE_UNTIL_HOUR` | `Europe/Berlin`, `6`, `23` | Daily window for those pings (about 17 h ≈ 520 of the 750 free Render hours a month) |
 
 ---
 
@@ -162,7 +164,7 @@ Everything is configured through environment variables (see [`application.yml`](
 
 The tables have row-level security enabled without policies, and `schema.sql` revokes every table privilege from the `anon` and `authenticated` roles. Supabase's public Data API therefore answers `permission denied` for these tables; only this API, which connects as the table owner, can read or write them.
 
-Free Supabase projects pause after 7 days without activity. The [`keepalive`](.github/workflows/keepalive.yml) workflow prevents that: every run queries the database through the API. Its daytime schedule (~17 h/day ≈ 520 Render instance hours a month) stays inside Render's 750 free hours per workspace, leaving room for the nutrition proxy.
+Free Supabase projects pause after 7 days without activity. The [`keepalive`](.github/workflows/keepalive.yml) workflow prevents that: every run queries the database through the API. The API's daytime self-pings (~17 h/day ≈ 520 Render instance hours a month) stay inside Render's 750 free hours per workspace, leaving room for the nutrition proxy.
 
 ---
 
