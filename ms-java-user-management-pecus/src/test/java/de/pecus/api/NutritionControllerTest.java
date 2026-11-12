@@ -20,9 +20,9 @@ import de.pecus.api.services.nutrition.NutritionService;
 /** The endpoints the web app's nutrition dialog calls (same contract as the former proxy). */
 class NutritionControllerTest {
 
-    private static MockMvc mvc(NutritionServiceTest.FakeHttp http, String usdaKey, String deeplKey) {
+    private static MockMvc mvc(NutritionServiceTest.FakeHttp http, String usdaKey, String translatorKey) {
         return MockMvcBuilders.standaloneSetup(
-                new NutritionControllerImpl(new NutritionService(http, usdaKey, deeplKey))).build();
+                new NutritionControllerImpl(new NutritionService(http, usdaKey, translatorKey, ""))).build();
     }
 
     @Test
@@ -71,8 +71,8 @@ class NutritionControllerTest {
     @Test
     void translateUsesDefaultsAndReturnsText() throws Exception {
         NutritionServiceTest.FakeHttp http = new NutritionServiceTest.FakeHttp();
-        http.body = "{\"translations\":[{\"text\":\"Sugar\"}]}";
-        mvc(http, "", "k:fx").perform(post("/api/translate").contentType(MediaType.APPLICATION_JSON)
+        http.body = "[{\"translations\":[{\"text\":\"Sugar\",\"to\":\"en\"}]}]";
+        mvc(http, "", "k").perform(post("/api/translate").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"Zucker\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.text", is("Sugar")));
