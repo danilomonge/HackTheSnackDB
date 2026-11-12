@@ -1,6 +1,6 @@
 package de.pecus.api.services.nutrition;
 
-/** A USDA or DeepL request failed. The message never contains URLs or keys. */
+/** A USDA or Azure Translator request failed. The message never contains URLs or keys. */
 public class UpstreamException extends Exception {
 
     private static final long serialVersionUID = 1L;

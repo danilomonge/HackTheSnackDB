@@ -19,8 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Nutrition facts (USDA FoodData Central) and German → English translation
- * (DeepL) for the web app's nutrition dialog. The API keys stay on the server
- * (env USDA_API_KEY / DEEPL_API_KEY); the browser only calls this API.
+ * (Azure AI Translator) for the web app's nutrition dialog. The API keys stay on
+ * the server (env USDA_API_KEY / AZURE_TRANSLATOR_KEY); the browser only calls this API.
  *
  * Same behaviour as the app's Python implementation
  * (HackTheSnack: hts_lib/backend/nutrition_service.py).
@@ -29,8 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class NutritionService {
 
     static final String USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
-    static final String DEEPL_FREE_URL = "https://api-free.deepl.com/v2/translate";
-    static final String DEEPL_PRO_URL = "https://api.deepl.com/v2/translate";
+    static final String TRANSLATOR_URL = "https://api.cognitive.microsofttranslator.com/translate";
     /** How many USDA search hits are checked for an exact name match. */
     static final int USDA_PAGE_SIZE = 25;
 
@@ -38,15 +37,18 @@ public class NutritionService {
 
     private final UpstreamHttp http;
     private final String usdaApiKey;
-    private final String deeplApiKey;
+    private final String translatorKey;
+    private final String translatorRegion;
 
     @Autowired
     public NutritionService(UpstreamHttp http,
                             @Value("${app.nutrition.usda-api-key:}") String usdaApiKey,
-                            @Value("${app.nutrition.deepl-api-key:}") String deeplApiKey) {
+                            @Value("${app.nutrition.translator-key:}") String translatorKey,
+                            @Value("${app.nutrition.translator-region:}") String translatorRegion) {
         this.http = http;
         this.usdaApiKey = usdaApiKey == null ? "" : usdaApiKey.trim();
-        this.deeplApiKey = deeplApiKey == null ? "" : deeplApiKey.trim();
+        this.translatorKey = translatorKey == null ? "" : translatorKey.trim();
+        this.translatorRegion = translatorRegion == null ? "" : translatorRegion.trim();
     }
 
     public boolean hasUsdaKey() {
@@ -98,29 +100,33 @@ public class NutritionService {
     }
 
     /**
-     * Translates text with DeepL; returns it unchanged without a key or without text.
-     * DeepL Free keys end with ":fx" and use their own host; authentication is by header
-     * (the legacy auth_key parameter is rejected).
+     * Translates text with Azure AI Translator; returns it unchanged without a key or without text.
+     * Language codes are case-insensitive (DE / EN). The region header is required for
+     * regional resources and is sent only when configured.
      */
     public String translate(String text, String sourceLang, String targetLang) throws UpstreamException {
-        if (deeplApiKey.isEmpty() || text == null || text.trim().isEmpty()) {
+        if (translatorKey.isEmpty() || text == null || text.trim().isEmpty()) {
             return text;
         }
-        String endpoint = deeplApiKey.endsWith(":fx") ? DEEPL_FREE_URL : DEEPL_PRO_URL;
+        String url = TRANSLATOR_URL
+                + "?api-version=3.0"
+                + "&from=" + encode(sourceLang.trim().toLowerCase(Locale.ROOT))
+                + "&to=" + encode(targetLang.trim().toLowerCase(Locale.ROOT));
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("text", Collections.singletonList(text));
-        payload.put("source_lang", sourceLang);
-        payload.put("target_lang", targetLang);
         String json;
         try {
-            json = JSON.writeValueAsString(payload);
+            json = JSON.writeValueAsString(Collections.singletonList(Collections.singletonMap("Text", text)));
         } catch (IOException e) {
-            throw new UpstreamException("DeepL", 0);
+            throw new UpstreamException("Translator", 0);
         }
 
-        Map<String, String> headers = Collections.singletonMap("Authorization", "DeepL-Auth-Key " + deeplApiKey);
-        JsonNode translations = request("DeepL", () -> http.postJson(endpoint, headers, json)).path("translations");
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("Ocp-Apim-Subscription-Key", translatorKey);
+        if (!translatorRegion.isEmpty()) {
+            headers.put("Ocp-Apim-Subscription-Region", translatorRegion);
+        }
+        JsonNode translations = request("Translator", () -> http.postJson(url, headers, json))
+                .path(0).path("translations");
         return translations.size() > 0 ? translations.get(0).path("text").asText(text) : text;
     }
 

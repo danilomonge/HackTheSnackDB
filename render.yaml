@@ -26,7 +26,9 @@ services:
       # Nutrition dialog of the web app (/api/nutrition, /api/translate).
       - key: USDA_API_KEY
         sync: false
-      - key: DEEPL_API_KEY
+      - key: AZURE_TRANSLATOR_KEY
+        sync: false
+      - key: AZURE_TRANSLATOR_REGION
         sync: false
       # The API pings this URL every 10 minutes so the free instance never spins
       # down (KeepAwakePinger). It is the workspace's only free service, so

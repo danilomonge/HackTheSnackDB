@@ -3,7 +3,7 @@ package de.pecus.api.services.nutrition;
 import java.io.IOException;
 import java.util.Map;
 
-/** Minimal HTTP access to the USDA and DeepL APIs (replaceable in tests). */
+/** Minimal HTTP access to the USDA and Azure Translator APIs (replaceable in tests). */
 public interface UpstreamHttp {
 
     /** Status code and body of an upstream response. */
