@@ -22,7 +22,7 @@ class NutritionControllerTest {
 
     private static MockMvc mvc(NutritionServiceTest.FakeHttp http, String usdaKey, String translatorKey) {
         return MockMvcBuilders.standaloneSetup(
-                new NutritionControllerImpl(new NutritionService(http, usdaKey, translatorKey, ""))).build();
+                new NutritionControllerImpl(new NutritionService(http, usdaKey, translatorKey, "", ""))).build();
     }
 
     @Test
