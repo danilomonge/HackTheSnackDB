@@ -15,7 +15,7 @@ import de.pecus.api.services.nutrition.NutritionService;
 import de.pecus.api.services.nutrition.UpstreamException;
 import de.pecus.api.services.nutrition.UpstreamHttp;
 
-/** USDA lookup and translation (Azure / MyMemory), with the HTTP layer faked. */
+/** USDA lookup and MyMemory translation, with the HTTP layer faked. */
 class NutritionServiceTest {
 
     /** Records requests and answers with a fixed status and body. */
@@ -58,7 +58,7 @@ class NutritionServiceTest {
                 + food("PEANUT BUTTER", 600, 50, 400.0) + ","
                 + food("Peanuts", 567, 49.2, 18.0) + ","
                 + food("PEANUTS", 585, 46.4, 384.0) + "]}";
-        NutritionService service = new NutritionService(http, "usda-key", "", "", "");
+        NutritionService service = new NutritionService(http, "usda-key", "");
 
         Map<String, Object> data = service.lookupUsda("peanuts");
 
@@ -80,7 +80,7 @@ class NutritionServiceTest {
         FakeHttp http = new FakeHttp();
         http.body = "{\"foods\":[" + food("SALT", 0, 0, 38000.0) + "," + food("SALT", 0, 0, 39000.0) + ","
                 + food("SALT", 0, 0, null) + "]}";
-        Map<String, Object> data = new NutritionService(http, "k", "", "", "").lookupUsda("Salt");
+        Map<String, Object> data = new NutritionService(http, "k", "").lookupUsda("Salt");
         assertEquals(38500.0, data.get("sodium"));
     }
 
@@ -88,16 +88,16 @@ class NutritionServiceTest {
     void usdaReturnsNothingForPartialMatchesShortNamesOrMissingKey() throws Exception {
         FakeHttp http = new FakeHttp();
         http.body = "{\"foods\":[" + food("SUGAR SUBSTITUTE", 10, 0, 0.0) + "]}";
-        assertNull(new NutritionService(http, "k", "", "", "").lookupUsda("sugar"));
-        assertNull(new NutritionService(http, "k", "", "", "").lookupUsda("ab"));
-        assertTrue(!new NutritionService(http, "", "", "", "").hasUsdaKey());
+        assertNull(new NutritionService(http, "k", "").lookupUsda("sugar"));
+        assertNull(new NutritionService(http, "k", "").lookupUsda("ab"));
+        assertTrue(!new NutritionService(http, "", "").hasUsdaKey());
     }
 
     @Test
     void usdaQueryIsUrlEncoded() throws Exception {
         FakeHttp http = new FakeHttp();
         http.body = "{\"foods\":[]}";
-        new NutritionService(http, "k", "", "", "").lookupUsda("Crème fraîche & M&M's");
+        new NutritionService(http, "k", "").lookupUsda("Crème fraîche & M&M's");
         assertTrue(http.urls.get(0).contains("query=Cr%C3%A8me+fra%C3%AEche+%26+M%26M%27s"), http.urls.get(0));
     }
 
@@ -106,57 +106,30 @@ class NutritionServiceTest {
         FakeHttp http = new FakeHttp();
         http.status = 429;
         UpstreamException e = assertThrows(UpstreamException.class,
-                () -> new NutritionService(http, "secret-key", "", "", "").lookupUsda("sugar"));
+                () -> new NutritionService(http, "secret-key", "").lookupUsda("sugar"));
         assertEquals(429, e.getStatus());
-        assertTrue(!e.getMessage().contains("secret-key"));
-    }
-
-    @Test
-    void translatorSendsKeyRegionAndLowercaseLanguages() throws Exception {
-        FakeHttp http = new FakeHttp();
-        http.body = "[{\"translations\":[{\"text\":\"Sugar\",\"to\":\"en\"}]}]";
-
-        assertEquals("Sugar", new NutritionService(http, "", "tr-key", "westeurope", "").translate("Zucker", "DE", "EN"));
-        assertEquals("https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=de&to=en",
-                http.urls.get(0));
-        assertEquals("tr-key", http.headers.get(0).get("Ocp-Apim-Subscription-Key"));
-        assertEquals("westeurope", http.headers.get(0).get("Ocp-Apim-Subscription-Region"));
-        assertEquals("[{\"Text\":\"Zucker\"}]", http.bodies.get(0));
-
-        new NutritionService(http, "", "global-key", "", "").translate("Zucker", "DE", "EN");
-        assertTrue(!http.headers.get(1).containsKey("Ocp-Apim-Subscription-Region"));
-    }
-
-    @Test
-    void translatorErrorsAreReportedWithoutTheKey() {
-        FakeHttp http = new FakeHttp();
-        http.status = 401;
-        UpstreamException e = assertThrows(UpstreamException.class,
-                () -> new NutritionService(http, "", "secret-key", "", "").translate("Zucker", "DE", "EN"));
-        assertEquals(401, e.getStatus());
         assertTrue(!e.getMessage().contains("secret-key"));
     }
 
     @Test
     void blankTextIsReturnedWithoutARequest() throws Exception {
         FakeHttp http = new FakeHttp();
-        assertEquals("  ", new NutritionService(http, "", "", "", "").translate("  ", "DE", "EN"));
-        assertEquals("  ", new NutritionService(http, "", "k", "", "").translate("  ", "DE", "EN"));
+        assertEquals("  ", new NutritionService(http, "", "").translate("  ", "DE", "EN"));
         assertTrue(http.urls.isEmpty());
     }
 
     @Test
-    void withoutAzureKeyMyMemoryTranslatesGermanWithIngredientContext() throws Exception {
+    void myMemoryTranslatesGermanWithIngredientContext() throws Exception {
         FakeHttp http = new FakeHttp();
         http.body = "{\"responseData\":{\"translatedText\":\"Ingredient: skimmed milk powder\"},"
                 + "\"responseStatus\":200,\"quotaFinished\":false}";
 
         assertEquals("skimmed milk powder",
-                new NutritionService(http, "", "", "", "").translate("Magermilchpulver", "DE", "EN"));
+                new NutritionService(http, "", "").translate("Magermilchpulver", "DE", "EN"));
         assertEquals("https://api.mymemory.translated.net/get?q=Zutat%3A+Magermilchpulver&langpair=de%7Cen",
                 http.urls.get(0));
 
-        new NutritionService(http, "", "", "", "team@example.org").translate("Zucker", "DE", "EN");
+        new NutritionService(http, "", "team@example.org").translate("Zucker", "DE", "EN");
         assertTrue(http.urls.get(1).endsWith("&de=team%40example.org"), http.urls.get(1));
     }
 
@@ -166,7 +139,7 @@ class NutritionServiceTest {
         http.body = "{\"responseData\":{\"translatedText\":\"MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS\"},"
                 + "\"responseStatus\":429,\"quotaFinished\":true}";
         UpstreamException e = assertThrows(UpstreamException.class,
-                () -> new NutritionService(http, "", "", "", "").translate("Zucker", "DE", "EN"));
+                () -> new NutritionService(http, "", "").translate("Zucker", "DE", "EN"));
         assertEquals(429, e.getStatus());
     }
 
@@ -174,7 +147,7 @@ class NutritionServiceTest {
     void translationsAreCached() throws Exception {
         FakeHttp http = new FakeHttp();
         http.body = "{\"responseData\":{\"translatedText\":\"Ingredient: sugar\"},\"responseStatus\":200}";
-        NutritionService service = new NutritionService(http, "", "", "", "");
+        NutritionService service = new NutritionService(http, "", "");
 
         assertEquals("sugar", service.translate("Zucker", "DE", "EN"));
         assertEquals("sugar", service.translate(" Zucker ", "de", "en"));

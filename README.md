@@ -2,7 +2,7 @@
 
 REST API and database for [HackTheSnack](https://github.com/danilomonge/HackTheSnack), the web app that reverse-engineers the recipe of a supermarket product from its ingredient list.
 
-The API stores the **products**, their **ingredients**, the **recipes** (which ingredients a product contains) and every saved **evaluation** (the estimated percentage of each ingredient). The HackTheSnack frontend uses it for *Search / autofill*, *Save*, *My Recipes* and *Statistics*. It also serves the **nutrition facts** (USDA) and **translations** (Azure AI Translator, or the keyless MyMemory API) of the nutrition dialog, so the API keys never reach the browser.
+The API stores the **products**, their **ingredients**, the **recipes** (which ingredients a product contains) and every saved **evaluation** (the estimated percentage of each ingredient). The HackTheSnack frontend uses it for *Search / autofill*, *Save*, *My Recipes* and *Statistics*. It also serves the **nutrition facts** (USDA) and **translations** (the free, keyless MyMemory API) of the nutrition dialog, so the API keys never reach the browser.
 
 | | |
 |---|---|
@@ -22,7 +22,7 @@ The API stores the **products**, their **ingredients**, the **recipes** (which i
 Browser (GitHub Pages, Flet/Pyodide)
         │  HTTPS + CORS
         ▼
-Render: Spring Boot API  (this repo, Docker) ──▶ USDA FoodData Central, Azure AI Translator / MyMemory
+Render: Spring Boot API  (this repo, Docker) ──▶ USDA FoodData Central, MyMemory
         │  JDBC over TLS, Supabase session pooler (IPv4)
         ▼
 Supabase: PostgreSQL  (schema in src/main/resources/db/schema.sql)
@@ -125,7 +125,7 @@ The evaluation and all its lines are written in one transaction.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/nutrition?ingredient=sugar` | `{"data": {name, kcal, carbs, fat, protein, sodium (mg), per: "100g"}}` or `{"data": null}`. Exact (case-insensitive) matches among USDA branded foods; every value is the median over all exact matches |
-| `POST` | `/api/translate` | `{"text": "Zucker", "source_lang": "DE", "target_lang": "EN"}` (languages optional, case-insensitive) → `{"text": "sugar"}`. Uses Azure AI Translator when `AZURE_TRANSLATOR_KEY` is set, otherwise MyMemory (no key; German input is sent as `Zutat: …` so MyMemory answers with machine translation). Results are cached in memory |
+| `POST` | `/api/translate` | `{"text": "Zucker", "source_lang": "DE", "target_lang": "EN"}` (languages optional, case-insensitive) → `{"text": "sugar"}`. Uses MyMemory (free; no key, account or card; German input is sent as `Zutat: …` so MyMemory answers with machine translation). Results are cached in memory |
 | `GET` | `/health` | `{"ok": true}` (the web app pings it on start-up) |
 
 Errors are `{"detail": "..."}` with status 400 (invalid input), 503 (`USDA_API_KEY` missing) or 502 (USDA / translation failed, e.g. MyMemory's daily quota). Neither URLs nor keys appear in them.
@@ -153,9 +153,7 @@ Everything is configured through environment variables (see [`application.yml`](
 | `PORT` | `8087` | HTTP port (Render sets it automatically) |
 | `JPA_DDL_AUTO` | `validate` | Leave as is in production |
 | `USDA_API_KEY` | empty | USDA FoodData Central key for `/api/nutrition` (free at https://fdc.nal.usda.gov/api-key-signup) |
-| `AZURE_TRANSLATOR_KEY` | empty | Optional Azure AI Translator key for `/api/translate` (free F0 tier: 2 M characters / month); without it MyMemory is used |
-| `AZURE_TRANSLATOR_REGION` | empty | Region of the Translator resource (e.g. `westeurope`); leave empty for a *Global* resource |
-| `MYMEMORY_EMAIL` | empty | Optional contact e-mail for MyMemory (used without Azure key): raises its free limit from 5,000 to 50,000 characters a day |
+| `MYMEMORY_EMAIL` | empty | Optional contact e-mail for MyMemory (`/api/translate`): raises its free limit from 5,000 to 50,000 characters a day |
 | `KEEP_AWAKE_URL` | empty (off) | Public health URL the API pings every 10 min to stay awake on Render's free plan |
 | `KEEP_AWAKE_ZONE`, `KEEP_AWAKE_FROM_HOUR`, `KEEP_AWAKE_UNTIL_HOUR` | `Europe/Berlin`, `6`, `23` | Daily window for those pings. Production uses `0`–`24` (always awake, ≤ 744 of the 750 free hours) because the API is the workspace's only free service |
 

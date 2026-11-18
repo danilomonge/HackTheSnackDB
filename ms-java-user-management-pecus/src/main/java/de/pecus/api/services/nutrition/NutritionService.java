@@ -19,9 +19,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Nutrition facts (USDA FoodData Central) and German → English translation for the
- * web app's nutrition dialog. Translation uses Azure AI Translator when
- * AZURE_TRANSLATOR_KEY is set and the keyless MyMemory API otherwise. The API keys
- * stay on the server (env USDA_API_KEY / AZURE_TRANSLATOR_KEY); the browser only calls this API.
+ * web app's nutrition dialog. Translation uses the free MyMemory API, which needs
+ * no key, account or card. The USDA key stays on the server (env USDA_API_KEY);
+ * the browser only calls this API.
  *
  * Same behaviour as the app's Python implementation
  * (HackTheSnack: hts_lib/backend/nutrition_service.py).
@@ -30,7 +30,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class NutritionService {
 
     static final String USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
-    static final String TRANSLATOR_URL = "https://api.cognitive.microsofttranslator.com/translate";
     static final String MYMEMORY_URL = "https://api.mymemory.translated.net/get";
     /**
      * Prefixed to German input for MyMemory: with this context it answers with machine
@@ -46,8 +45,6 @@ public class NutritionService {
 
     private final UpstreamHttp http;
     private final String usdaApiKey;
-    private final String translatorKey;
-    private final String translatorRegion;
     private final String myMemoryEmail;
     private final Map<String, String> translationCache = Collections.synchronizedMap(
             new LinkedHashMap<String, String>(16, 0.75f, true) {
@@ -62,13 +59,9 @@ public class NutritionService {
     @Autowired
     public NutritionService(UpstreamHttp http,
                             @Value("${app.nutrition.usda-api-key:}") String usdaApiKey,
-                            @Value("${app.nutrition.translator-key:}") String translatorKey,
-                            @Value("${app.nutrition.translator-region:}") String translatorRegion,
                             @Value("${app.nutrition.mymemory-email:}") String myMemoryEmail) {
         this.http = http;
         this.usdaApiKey = usdaApiKey == null ? "" : usdaApiKey.trim();
-        this.translatorKey = translatorKey == null ? "" : translatorKey.trim();
-        this.translatorRegion = translatorRegion == null ? "" : translatorRegion.trim();
         this.myMemoryEmail = myMemoryEmail == null ? "" : myMemoryEmail.trim();
     }
 
@@ -121,10 +114,10 @@ public class NutritionService {
     }
 
     /**
-     * Translates text; returns it unchanged without text. Uses Azure AI Translator when a
-     * key is configured, otherwise MyMemory (no key; 5,000 characters a day per server,
-     * 50,000 with MYMEMORY_EMAIL). Language codes are case-insensitive (DE / EN).
-     * Results are cached, so each ingredient name is translated only once.
+     * Translates text with MyMemory (no key; 5,000 characters a day per server IP,
+     * 50,000 with MYMEMORY_EMAIL); returns it unchanged without text. Language codes
+     * are case-insensitive (DE / EN). Results are cached, so each ingredient name is
+     * translated only once.
      */
     public String translate(String text, String sourceLang, String targetLang) throws UpstreamException {
         if (text == null || text.trim().isEmpty()) {
@@ -137,32 +130,9 @@ public class NutritionService {
         if (cached != null) {
             return cached;
         }
-        String translated = translatorKey.isEmpty()
-                ? translateWithMyMemory(text.trim(), from, to)
-                : translateWithAzure(text, from, to);
+        String translated = translateWithMyMemory(text.trim(), from, to);
         translationCache.put(cacheKey, translated);
         return translated;
-    }
-
-    /** The region header is required for regional Azure resources and is sent only when configured. */
-    private String translateWithAzure(String text, String from, String to) throws UpstreamException {
-        String url = TRANSLATOR_URL + "?api-version=3.0&from=" + encode(from) + "&to=" + encode(to);
-
-        String json;
-        try {
-            json = JSON.writeValueAsString(Collections.singletonList(Collections.singletonMap("Text", text)));
-        } catch (IOException e) {
-            throw new UpstreamException("Translator", 0);
-        }
-
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("Ocp-Apim-Subscription-Key", translatorKey);
-        if (!translatorRegion.isEmpty()) {
-            headers.put("Ocp-Apim-Subscription-Region", translatorRegion);
-        }
-        JsonNode translations = request("Translator", () -> http.postJson(url, headers, json))
-                .path(0).path("translations");
-        return translations.size() > 0 ? translations.get(0).path("text").asText(text) : text;
     }
 
     /** German input gets {@link #GERMAN_CONTEXT}, which is cut from the answer again. */

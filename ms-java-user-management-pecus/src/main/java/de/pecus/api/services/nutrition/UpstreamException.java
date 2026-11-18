@@ -1,6 +1,6 @@
 package de.pecus.api.services.nutrition;
 
-/** A USDA, Azure Translator or MyMemory request failed. The message never contains URLs or keys. */
+/** A USDA or MyMemory request failed. The message never contains URLs or keys. */
 public class UpstreamException extends Exception {
 
     private static final long serialVersionUID = 1L;
