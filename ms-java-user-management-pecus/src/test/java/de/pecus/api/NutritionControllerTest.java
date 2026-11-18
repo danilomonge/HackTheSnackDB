@@ -20,14 +20,14 @@ import de.pecus.api.services.nutrition.NutritionService;
 /** The endpoints the web app's nutrition dialog calls (same contract as the former proxy). */
 class NutritionControllerTest {
 
-    private static MockMvc mvc(NutritionServiceTest.FakeHttp http, String usdaKey, String translatorKey) {
+    private static MockMvc mvc(NutritionServiceTest.FakeHttp http, String usdaKey) {
         return MockMvcBuilders.standaloneSetup(
-                new NutritionControllerImpl(new NutritionService(http, usdaKey, translatorKey, "", ""))).build();
+                new NutritionControllerImpl(new NutritionService(http, usdaKey, ""))).build();
     }
 
     @Test
     void healthAnswersOk() throws Exception {
-        mvc(new NutritionServiceTest.FakeHttp(), "", "").perform(get("/health"))
+        mvc(new NutritionServiceTest.FakeHttp(), "").perform(get("/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok", is(true)));
     }
@@ -36,7 +36,7 @@ class NutritionControllerTest {
     void nutritionReturnsDataOrNull() throws Exception {
         NutritionServiceTest.FakeHttp http = new NutritionServiceTest.FakeHttp();
         http.body = "{\"foods\":[{\"description\":\"SUGAR\",\"foodNutrients\":[{\"nutrientName\":\"Energy\",\"value\":375}]}]}";
-        MockMvc mvc = mvc(http, "k", "");
+        MockMvc mvc = mvc(http, "k");
 
         mvc.perform(get("/api/nutrition").param("ingredient", "sugar"))
                 .andExpect(status().isOk())
@@ -50,11 +50,11 @@ class NutritionControllerTest {
 
     @Test
     void nutritionValidatesInputAndConfiguration() throws Exception {
-        mvc(new NutritionServiceTest.FakeHttp(), "", "").perform(get("/api/nutrition").param("ingredient", "sugar"))
+        mvc(new NutritionServiceTest.FakeHttp(), "").perform(get("/api/nutrition").param("ingredient", "sugar"))
                 .andExpect(status().isServiceUnavailable());
-        mvc(new NutritionServiceTest.FakeHttp(), "k", "").perform(get("/api/nutrition").param("ingredient", " "))
+        mvc(new NutritionServiceTest.FakeHttp(), "k").perform(get("/api/nutrition").param("ingredient", " "))
                 .andExpect(status().isBadRequest());
-        mvc(new NutritionServiceTest.FakeHttp(), "k", "").perform(get("/api/nutrition").param("ingredient", "x".repeat(201)))
+        mvc(new NutritionServiceTest.FakeHttp(), "k").perform(get("/api/nutrition").param("ingredient", "x".repeat(201)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -62,7 +62,7 @@ class NutritionControllerTest {
     void upstreamFailuresBecome502WithoutLeakingTheKey() throws Exception {
         NutritionServiceTest.FakeHttp http = new NutritionServiceTest.FakeHttp();
         http.status = 403;
-        mvc(http, "secret-usda", "").perform(get("/api/nutrition").param("ingredient", "sugar"))
+        mvc(http, "secret-usda").perform(get("/api/nutrition").param("ingredient", "sugar"))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.detail", is("USDA request failed with HTTP 403")))
                 .andExpect(jsonPath("$.detail", not(containsString("secret"))));
@@ -71,10 +71,10 @@ class NutritionControllerTest {
     @Test
     void translateUsesDefaultsAndReturnsText() throws Exception {
         NutritionServiceTest.FakeHttp http = new NutritionServiceTest.FakeHttp();
-        http.body = "[{\"translations\":[{\"text\":\"Sugar\",\"to\":\"en\"}]}]";
-        mvc(http, "", "k").perform(post("/api/translate").contentType(MediaType.APPLICATION_JSON)
+        http.body = "{\"responseData\":{\"translatedText\":\"Ingredient: sugar\"},\"responseStatus\":200}";
+        mvc(http, "").perform(post("/api/translate").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"Zucker\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is("Sugar")));
+                .andExpect(jsonPath("$.text", is("sugar")));
     }
 }
